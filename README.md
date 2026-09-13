@@ -1,16 +1,15 @@
 <div align="center">
-  <img src="./assets/furina-banner.png" alt="Blue moonlit water stage" width="100%" />
+  <img src="./assets/hydro-stage-banner.png" alt="Moonlit water stage" width="100%" />
 
   <h1>Pratik</h1>
-  <p><b>AI systems · developer tools · from-scratch machine learning</b></p>
-  <p>he/him</p>
+  <p><b>Computer Engineering student · AI · System Design · Machine Learning</b></p>
 </div>
 
 ## About
 
-I build practical AI tooling, train small models from scratch, and make fast command-line applications.
+I'm a Computer Engineering student interested in AI, system design, and machine learning.
 
-**Working with:** Rust · Python · PyTorch · Transformers · FFmpeg · Flask
+**Languages:** Python · C++
 
 ## Selected work
 
