@@ -3,12 +3,10 @@
     <img src="./assets/hydro-stage-banner.png" alt="Moonlit water stage" width="100%" />
   </a>
 
-  <h1>Pratik</h1>
+  <h1>Welcome</h1>
   <p><b>Computer Engineering student · AI · System Design · Machine Learning</b></p>
 
-  <a href="https://klipy.com/gifs/furina-genshin-impact-12">
-    <img src="https://klipy.com/gifs/furina-genshin-impact-12" alt="Furina Genshin Impact" width="220" />
-  </a>
+  <iframe src="https://klipy.com/gifs/furina-genshin-impact-12/player" width="308" height="320" title="Furina Genshin Impact" frameborder="0" allowfullscreen loading="lazy"></iframe>
 </div>
 
 ## About
