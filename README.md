@@ -1,16 +1,18 @@
-## Hi there 👋
+<div align="center">
+  <img src="./assets/furina-banner.png" alt="Blue moonlit water stage" width="100%" />
 
-<!--
-**Pratik-3706/Pratik-3706** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+  <h1>Pratik</h1>
+  <p>Building, learning, and shipping.</p>
 
-Here are some ideas to get you started:
+  <img src="./assets/hydro-ornament.png" alt="Hydro ornament" width="88" />
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+  <br />
+  <br />
+
+  <img src="./assets/furina.gif" alt="Furina animation" width="250" />
+
+  <br />
+  <br />
+
+  <sub>A little hydro, kept simple.</sub>
+</div>
