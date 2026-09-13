@@ -2,9 +2,9 @@
   <img src="./assets/hydro-stage-banner.png" alt="Moonlit water stage" width="100%" />
 
   <h1>Welcome</h1>
-  <p><b>Computer Engineering &nbsp;·&nbsp; AI &amp; Machine Learning &nbsp;·&nbsp; Systems Design</b></p>
-
   <img src="./assets/hydro-ornament.png" alt="Hydro ornament" width="42" />
+
+  <p><b>Computer Engineering &nbsp;·&nbsp; AI &amp; Machine Learning &nbsp;·&nbsp; Systems Design</b></p>
 </div>
 
 <hr />
