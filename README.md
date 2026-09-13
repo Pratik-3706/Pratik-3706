@@ -1,19 +1,17 @@
 <div align="center">
   <img src="./assets/hydro-stage-banner.png" alt="Moonlit water stage" width="100%" />
 
-  <br /><br />
-
-  <img src="https://github.com/user-attachments/assets/cd0843a4-9c1a-489f-a6e8-1223089830ac" width="240" alt="Furina" />
-
   <h1>Welcome</h1>
   <p><b>Computer Engineering &nbsp;·&nbsp; AI &amp; Machine Learning &nbsp;·&nbsp; Systems Design</b></p>
+
+  <img src="./assets/hydro-ornament.png" alt="Hydro ornament" width="42" />
 </div>
 
 <hr />
 
 ### About
 
-I'm a Computer Engineering student focused on building performant systems, machine learning architectures, and developer tooling. My interests center on transformer internals, sandboxed execution runtimes, and low-level media pipelines.
+I'm a Computer Engineering student focused on AI, ML systems, and system architecture & design.
 
 <br />
 
@@ -25,7 +23,7 @@ I'm a Computer Engineering student focused on building performant systems, machi
     </td>
     <td width="50%" valign="top">
       <b>Domains &amp; Focus</b><br />
-      <code>Transformers</code> &nbsp; <code>Deep Learning</code> &nbsp; <code>FFmpeg</code> &nbsp; <code>Systems</code>
+      <code>AI</code> &nbsp; <code>ML Systems</code> &nbsp; <code>System Architecture &amp; Design</code>
     </td>
   </tr>
 </table>
@@ -61,5 +59,5 @@ I'm a Computer Engineering student focused on building performant systems, machi
 
 <div align="center">
   <br />
-  <img src="./assets/hydro-ornament.png" alt="Hydro ornament" width="40" />
+  <img src="https://github.com/user-attachments/assets/cd0843a4-9c1a-489f-a6e8-1223089830ac" width="220" alt="Furina" />
 </div>
