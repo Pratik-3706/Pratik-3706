@@ -1,9 +1,7 @@
 <div align="center">
   <img src="./assets/hydro-stage-banner.png" alt="Moonlit water stage" width="100%" />
 
-  <h1>Welcome</h1>
-  <img src="./assets/hydro-ornament.png" alt="Hydro ornament" width="42" />
-
+  <h1>Welcome &nbsp;<img src="./assets/hydro-ornament.png" alt="Hydro ornament" width="28" valign="middle" /></h1>
   <p><b>Computer Engineering &nbsp;·&nbsp; AI &amp; Machine Learning &nbsp;·&nbsp; Systems Design</b></p>
 </div>
 
