@@ -11,6 +11,13 @@
 
 I'm a Computer Engineering student focused on AI, ML systems, and system architecture & design.
 
+
+Also check: 
+
+
+  [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-StupidLm-yellow)](https://huggingface.co/Pratik-3706/StupidLm)
+
+
 <br />
 
 <table>
