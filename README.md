@@ -16,6 +16,7 @@ Also check:
 
 
 [![Hugging Face](https://img.shields.io/badge/Hugging%20Face-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/Pratik-3706)
+
 My Portfolio : https://pratik-3706.github.io/my_portfolio/
 
 
