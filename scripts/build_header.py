@@ -37,6 +37,11 @@ LOOPS = [
 SURFER_HEIGHT = 128   # drawn height of her standing pose, in header units
 
 W, H = 846, 300
+# How much of the scene the header shows. 1 shows all of it; above 1 crops in,
+# keeping the bottom edge and trimming the sky and a little off each side.
+ZOOM = 1.1
+VIEW_W, VIEW_H = W / ZOOM, H / ZOOM
+VIEW_X, VIEW_Y = (W - VIEW_W) * 0.4, H - VIEW_H
 WATER = 126           # where the sea meets the coast
 CITY_BASE = 104       # top of the sea wall the city stands on
 
@@ -164,7 +169,7 @@ SUNRISE, SUNSET = 36, 89          # percent of the cycle; the moon has the rest
 
 def sky_xy(u):
     """Where the sun or moon is, u=0 rising on the right to u=1 setting on the left."""
-    return W - 56 - (W - 112) * u, 150 - 115 * math.sin(math.pi * u)
+    return W - 56 - (W - 112) * u, 150 - 92 * math.sin(math.pi * u)
 
 
 def sky_keyframes(body, steps=12):
@@ -390,9 +395,9 @@ def build():
     def city():
         return f'<g class="city">{city_tile}<g transform="translate({W})">{city_tile}</g></g>'
 
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="{VIEW_X:.1f} {VIEW_Y:.1f} {VIEW_W:.1f} {VIEW_H:.1f}" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <defs>
-    <clipPath id="panel"><rect width="{W}" height="{H}" rx="12"/></clipPath>
+    <clipPath id="panel"><rect x="{VIEW_X:.1f}" y="{VIEW_Y:.1f}" width="{VIEW_W:.1f}" height="{VIEW_H:.1f}" rx="11"/></clipPath>
     <linearGradient id="sky" x1="0" x2="0" y1="0" y2="{WATER}" gradientUnits="userSpaceOnUse">
       <stop class="c-sky-top" offset="0" stop-color="{SKY_TOP}"/><stop class="c-sky-low" offset="1" stop-color="{SKY_LOW}"/>
     </linearGradient>
