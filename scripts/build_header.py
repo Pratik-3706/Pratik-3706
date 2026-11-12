@@ -51,6 +51,8 @@ WARM = "#f2c14e"
 # The waves she rides: a rolling swell that travels right, under her board.
 SURFER_X = 200
 WAVE_Y, WAVE_AMP, WAVE_PERIOD, WAVE_SECS = 250, 14, 423, 4.0
+BOARD_SINK = 11       # how far the bottom of the board sits under the surface
+SHIP_Y = 231          # every ship floats on this one line, just behind the waves
 
 # --- surfer ----------------------------------------------------------------
 
@@ -154,11 +156,6 @@ def ride_keyframes(amp, period, steps=24):
         slope = -amp * 2 * math.pi / period * math.sin(2 * math.pi * f)
         out.append(f"{f * 100:.2f}% {{ transform: translateY({y:.2f}px) rotate({math.degrees(math.atan(slope)):.2f}deg); }}")
     return " ".join(out)
-
-
-def chop_line(y, amp, period):
-    """A low, even sine line, long enough to scroll one period."""
-    return wave_path(y, amp, period, 0)
 
 
 # --- scenery ---------------------------------------------------------------
@@ -333,7 +330,6 @@ def build():
     .shimmer {{ animation: shimmer 1.8s ease-in-out infinite alternate; }}
     .ripple {{ animation: drift 4s linear infinite; }}
     .ripple.slow {{ animation-duration: 7s; }}
-    .chop {{ animation: chop 5s linear infinite; }}
     .wave {{ animation: wave {WAVE_SECS}s linear infinite; }}
     .ride {{ animation: ride {WAVE_SECS}s linear infinite; }}
     .splash {{ animation: splash {frames_secs:.3f}s linear infinite; }}
@@ -348,7 +344,6 @@ def build():
     @keyframes rock {{ from {{ transform: rotate(-.8deg); }} to {{ transform: rotate(.8deg); }} }}
     @keyframes shimmer {{ from {{ opacity: 1; transform: translateX(-2px); }} to {{ opacity: .35; transform: translateX(2px); }} }}
     @keyframes drift {{ to {{ stroke-dashoffset: -240; }} }}
-    @keyframes chop {{ from {{ transform: translateX(-211.5px); }} to {{ transform: translateX(0); }} }}
     @keyframes wave {{ from {{ transform: translateX(-{WAVE_PERIOD}px); }} to {{ transform: translateX(0); }} }}
     @keyframes ride {{ {ride_css} }}
     @keyframes frames {{ {frames_css} }}
@@ -381,10 +376,16 @@ def build():
       <path class="ripple" d="M0 196H{W}" stroke-dasharray="84 156" stroke-dashoffset="150"/>
     </g>
 
-    {ship(container_ship(), 150, 0.6, 110, -48)}
-    {ship(cruise_ship(), 218, 1.35, 46, -11)}
+    {ship(container_ship(), SHIP_Y, 0.95, 84, -40)}
+    {ship(cruise_ship(), SHIP_Y, 1.35, 46, -11)}
 
-    <path class="chop" d="{chop_line(228, 3.5, 211.5)}" stroke="{LINE}" stroke-opacity=".55" stroke-width="1.2"/>
+    <g transform="translate({SURFER_X} {WAVE_Y})">
+      <g class="ride">
+        <svg x="{-ax * k:.2f}" y="{-ay * k + BOARD_SINK:.2f}" width="{cw * k:.2f}" height="{ch * k:.2f}" viewBox="0 0 {cw} {ch}">
+          <image class="strip" width="{cw * n_cells}" height="{ch}" href="data:image/png;base64,{b64}"/>
+        </svg>
+      </g>
+    </g>
 
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, close_to=H + 10)}" fill="url(#face)"/>
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, drop=13)}" stroke="{FOAM}" stroke-opacity=".28" stroke-width="1.3"/>
@@ -392,21 +393,17 @@ def build():
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X)}" stroke="{FOAM}" stroke-width="2"/>
 
     <g transform="translate({SURFER_X} {WAVE_Y})">
-      <g class="ride"><g>
-        <ellipse cx="-4" cy="3" rx="38" ry="3.5" fill="#040a14" opacity=".5"/>
+      <g class="ride">
         <g stroke="#fff" stroke-width="1.8">
           <path class="spray" d="M-30 -2h-14"/>
           <path class="spray b" d="M-34 -9h-10"/>
           <path class="spray c" d="M-26 3h-18"/>
         </g>
-        <svg x="{-ax * k:.2f}" y="{-ay * k + 5:.2f}" width="{cw * k:.2f}" height="{ch * k:.2f}" viewBox="0 0 {cw} {ch}">
-          <image class="strip" width="{cw * n_cells}" height="{ch}" href="data:image/png;base64,{b64}"/>
-        </svg>
         <g class="splash" stroke="#fff" stroke-width="3">
           <path d="M-72 6q72 -18 144 0M-42 0q-14 -30 -44 -36M-29 -4q-8 -38 -30 -52M-14 -7q-2 -30 -11 -44M40 0q14 -28 40 -32M27 -4q7 -34 26 -46M12 -7q3 -26 10 -38"/>
           <g fill="#fff" stroke="none"><circle cx="-91" cy="-41" r="3.4"/><circle cx="-63" cy="-61" r="3"/><circle cx="-27" cy="-57" r="2.6"/><circle cx="85" cy="-37" r="3.4"/><circle cx="57" cy="-55" r="3"/><circle cx="24" cy="-51" r="2.6"/><circle cx="-78" cy="-18" r="2.2"/><circle cx="70" cy="-14" r="2.2"/><circle cx="-46" cy="-74" r="2"/><circle cx="42" cy="-68" r="2"/></g>
         </g>
-      </g></g>
+      </g>
     </g>
   </g>
 </svg>
