@@ -36,7 +36,7 @@ SURFER_HEIGHT = 128   # drawn height of her standing pose, in header units
 
 W, H = 846, 300
 WATER = 126           # where the sea meets the coast
-CITY_BASE = 116       # top of the quay the city stands on
+CITY_BASE = 104       # top of the sea wall the city stands on
 
 # Colours. The scene has its own night sky, so it looks the same on any theme.
 SKY_TOP, SKY_LOW = "#070d1a", "#14294a"
@@ -59,32 +59,36 @@ def load_sprites(loops):
 
     Returns (base64 png, cell w, cell h, anchor x, anchor y, timeline, standing h)
     where the anchor is the point of a cell that sits on the water and the
-    timeline is a list of (frame index, seconds).
+    timeline is a list of (frame index, seconds, lands). `lands` marks the frame
+    of a trick where the board comes back down onto the water.
     """
     placed, timeline, standing, seen = [], [], None, {}
     for path, times, speed, pin in loops:
-        if path in seen:
-            first, secs = seen[path]
-            for _ in range(times):
-                timeline += [(first + i, t) for i, t in enumerate(secs)]
-            continue
-        gif = Image.open(path)
-        first = len(placed)
-        frames, secs = [], []
-        for i in range(gif.n_frames):
-            gif.seek(i)
-            secs.append(gif.info.get("duration", 100) / 1000 / speed)
-            frames.append(gif.convert("RGBA"))
-        boxes = [f.getbbox() for f in frames]
-        anchor_x = (boxes[0][0] + boxes[0][2]) // 2
-        if standing is None:
-            standing = boxes[0][3] - boxes[0][1]
-        for f, b in zip(frames, boxes):
-            foot = b[3] if pin else boxes[0][3]
-            placed.append((f.crop(b), b[0] - anchor_x, b[1] - foot))
-        seen[path] = (first, secs)
+        if path not in seen:
+            gif = Image.open(path)
+            frames, secs = [], []
+            for i in range(gif.n_frames):
+                gif.seek(i)
+                secs.append(gif.info.get("duration", 100) / 1000 / speed)
+                frames.append(gif.convert("RGBA"))
+            boxes = [f.getbbox() for f in frames]
+            anchor_x = (boxes[0][0] + boxes[0][2]) // 2
+            if standing is None:
+                standing = boxes[0][3] - boxes[0][1]
+            # How far the board is off the water in each frame, and the frame
+            # after the highest point where it has dropped most of the way back.
+            lift = [boxes[0][3] - b[3] for b in boxes]
+            landing = None
+            if not pin and max(lift) > 8:
+                peak = lift.index(max(lift))
+                landing = next((i for i in range(peak + 1, len(lift)) if lift[i] < max(lift) / 2), None)
+            seen[path] = (len(placed), secs, landing)
+            for f, b in zip(frames, boxes):
+                foot = b[3] if pin else boxes[0][3]
+                placed.append((f.crop(b), b[0] - anchor_x, b[1] - foot))
+        first, secs, landing = seen[path]
         for _ in range(times):
-            timeline += [(first + i, s) for i, s in enumerate(secs)]
+            timeline += [(first + i, t, i == landing) for i, t in enumerate(secs)]
 
     left = min(dx for _, dx, _ in placed)
     top = min(dy for _, _, dy in placed)
@@ -101,13 +105,31 @@ def load_sprites(loops):
 
 def frame_keyframes(timeline, cw):
     """CSS keyframes that jump the strip to each frame at the right moment."""
-    total = sum(s for _, s in timeline)
-    out, t = [], 0.0
-    for idx, secs in timeline:
-        out.append(f"{t / total * 100:.3f}% {{ transform: translateX(-{idx * cw}px); }}")
-        t += secs
+    total = sum(t for _, t, _ in timeline)
+    out, now = [], 0.0
+    for idx, secs, _ in timeline:
+        out.append(f"{now / total * 100:.3f}% {{ transform: translateX(-{idx * cw}px); }}")
+        now += secs
     out.append(f"100% {{ transform: translateX(-{timeline[0][0] * cw}px); }}")
     return " ".join(out), total
+
+
+def splash_keyframes(timeline, burst=0.6):
+    """CSS keyframes that throw up a splash each time a trick lands."""
+    total = sum(t for _, t, _ in timeline)
+    hidden = "opacity: 0; transform: scale(.45);"
+    out, now = [f"0% {{ {hidden} }}"], 0.0
+    for _, secs, lands in timeline:
+        if lands:
+            a, b = now / total * 100, min(99.9, (now + burst) / total * 100)
+            out += [f"{a - 0.01:.3f}% {{ {hidden} }}",
+                    f"{a:.3f}% {{ opacity: 1; transform: scale(.45); }}",
+                    f"{(a + b) / 2:.3f}% {{ opacity: .95; transform: scale(1); }}",
+                    f"{b:.3f}% {{ opacity: 0; transform: scale(1.25); }}",
+                    f"{b + 0.01:.3f}% {{ {hidden} }}"]
+        now += secs
+    out.append(f"100% {{ {hidden} }}")
+    return " ".join(out)
 
 
 # --- water -----------------------------------------------------------------
@@ -183,8 +205,16 @@ def skyline(rng):
         x += w
     d.append(f"V{base}H0Z")
 
-    # The coast itself: a quay wall with street lamps, and a lighthouse on it.
-    lamps = "".join(f'<circle cx="{lx}" cy="{base + 2.5}" r="1"/>' for lx in range(14, W, 47))
+    # The coast itself: a sea wall with buttresses and street lamps, rocks at
+    # its foot, and a lighthouse standing on it.
+    lamps = "".join(f'<circle cx="{lx}" cy="{base - 2.5}" r="1.1"/>' for lx in range(14, W, 47))
+    buttresses = "".join(f"M{bx} {base}V{WATER - 5}" for bx in range(30, W, 47))
+    rocks, rx = [f"M0 {WATER}"], 0
+    while rx < W:
+        rw = rng.randint(9, 22)
+        rocks.append(f"Q{rx + rw / 2:g} {WATER - rng.randint(4, 9)} {min(W, rx + rw)} {WATER - rng.randint(0, 2)}")
+        rx += rw
+    rocks.append(f"V{WATER}Z")
     lx = 610
     lighthouse = (
         f'<path d="M{lx - 5} {base}L{lx - 3} {base - 34}H{lx + 3}L{lx + 5} {base}Z'
@@ -196,8 +226,9 @@ def skyline(rng):
         f'<path d="{"".join(d)}" fill="{LAND}" stroke="{LINE}" stroke-opacity=".75" stroke-width="1"/>'
         f'<g fill="{WARM}">{"".join(lights)}</g>{lighthouse}'
         f'<rect y="{base}" width="{W}" height="{WATER - base}" fill="{QUAY}"/>'
-        f'<path d="M0 {base}H{W}" stroke="{LINE}" stroke-opacity=".8" stroke-width="1"/>'
-        f'<path d="M0 {base + 6}H{W}" stroke="{LINE}" stroke-opacity=".35" stroke-width="1" stroke-dasharray="3 9"/>'
+        f'<path d="{buttresses}" stroke="{LINE}" stroke-opacity=".3" stroke-width="1"/>'
+        f'<path d="M0 {base}H{W}" stroke="{LINE}" stroke-opacity=".9" stroke-width="1.2"/>'
+        f'<path d="{"".join(rocks)}" fill="{LAND}" stroke="{LINE}" stroke-opacity=".45" stroke-width="1"/>'
         f'<g fill="{WARM}">{lamps}</g>')
 
 
@@ -251,7 +282,8 @@ def ship(body, waterline, scale, secs, delay):
 def build():
     b64, cw, ch, ax, ay, timeline, standing = load_sprites(LOOPS)
     frames_css, frames_secs = frame_keyframes(timeline, cw)
-    n_cells = max(i for i, _ in timeline) + 1
+    n_cells = max(i for i, _, _ in timeline) + 1
+    splash_css = splash_keyframes(timeline)
     k = SURFER_HEIGHT / standing                     # header units per GIF pixel
     rng = random.Random(7)
 
@@ -282,6 +314,9 @@ def build():
     <linearGradient id="face" x1="0" x2="0" y1="{crest}" y2="{H}" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#2c629c"/><stop offset=".45" stop-color="#163a67"/><stop offset="1" stop-color="#0a1a33"/>
     </linearGradient>
+    <linearGradient id="shade" x1="0" x2="0" y1="{WATER}" y2="{WATER + 10}" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#040a14" stop-opacity=".6"/><stop offset="1" stop-color="#040a14" stop-opacity="0"/>
+    </linearGradient>
     <radialGradient id="glow"><stop offset="0" stop-color="#cfe3ff" stop-opacity=".32"/><stop offset="1" stop-color="#cfe3ff" stop-opacity="0"/></radialGradient>
   </defs>
   <style>
@@ -300,6 +335,7 @@ def build():
     .wave {{ animation: wave {WAVE_SECS}s linear infinite; }}
     .bob {{ animation: bob {half}s ease-in-out infinite alternate; }}
     .tilt {{ animation: tilt {half}s ease-in-out {-half / 2}s infinite alternate; }}
+    .splash {{ animation: splash {frames_secs:.3f}s linear infinite; }}
     .strip {{ animation: frames {frames_secs:.3f}s step-end infinite; image-rendering: pixelated; }}
     .spray {{ animation: spray .6s linear infinite; }}
     .spray.b {{ animation-delay: -.2s; }}
@@ -316,6 +352,7 @@ def build():
     @keyframes bob {{ from {{ transform: translateY(-{WAVE_AMP}px); }} to {{ transform: translateY({WAVE_AMP}px); }} }}
     @keyframes tilt {{ from {{ transform: rotate(6deg); }} to {{ transform: rotate(-6deg); }} }}
     @keyframes frames {{ {frames_css} }}
+    @keyframes splash {{ {splash_css} }}
     @keyframes spray {{ from {{ transform: translate(0, 0); opacity: .95; }} to {{ transform: translate(-46px, -8px); opacity: 0; }} }}
     @media (prefers-reduced-motion: reduce) {{ * {{ animation: none !important; }} }}
   </style>
@@ -332,9 +369,8 @@ def build():
     </g>
 
     <rect y="{WATER}" width="{W}" height="{H - WATER}" fill="url(#sea)"/>
-    <g transform="translate(0 {WATER}) scale(1 -.5) translate(0 {-WATER})" opacity=".25">{city()}</g>
     {city()}
-    <path d="M0 {WATER}H{W}" stroke="{FOAM}" stroke-opacity=".55" stroke-width="1.2" stroke-dasharray="14 6 5 9"/>
+    <rect y="{WATER}" width="{W}" height="10" fill="url(#shade)"/>
 
     <g stroke="{FOAM}" stroke-width="1.6" stroke-opacity=".8">{moon_path}</g>
 
@@ -366,6 +402,10 @@ def build():
         <svg x="{-ax * k:.2f}" y="{-ay * k + 5:.2f}" width="{cw * k:.2f}" height="{ch * k:.2f}" viewBox="0 0 {cw} {ch}">
           <image class="strip" width="{cw * n_cells}" height="{ch}" href="data:image/png;base64,{b64}"/>
         </svg>
+        <g class="splash" stroke="#fff" stroke-width="3">
+          <path d="M-72 6q72 -18 144 0M-42 0q-14 -30 -44 -36M-29 -4q-8 -38 -30 -52M-14 -7q-2 -30 -11 -44M40 0q14 -28 40 -32M27 -4q7 -34 26 -46M12 -7q3 -26 10 -38"/>
+          <g fill="#fff" stroke="none"><circle cx="-91" cy="-41" r="3.4"/><circle cx="-63" cy="-61" r="3"/><circle cx="-27" cy="-57" r="2.6"/><circle cx="85" cy="-37" r="3.4"/><circle cx="57" cy="-55" r="3"/><circle cx="24" cy="-51" r="2.6"/><circle cx="-78" cy="-18" r="2.2"/><circle cx="70" cy="-14" r="2.2"/><circle cx="-46" cy="-74" r="2"/><circle cx="42" cy="-68" r="2"/></g>
+        </g>
       </g></g>
     </g>
   </g>
