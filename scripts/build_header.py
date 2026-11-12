@@ -135,28 +135,30 @@ def splash_keyframes(timeline, burst=0.6):
 # --- water -----------------------------------------------------------------
 
 def wave_path(y, amp, period, crest_x, drop=0, close_to=None):
-    """A rolling wave with a crest at crest_x once it has scrolled a full period."""
-    start = crest_x - period / 4
-    while start > -period:
-        start -= period
-    d = f"M{start:g} {y + drop}q{period / 4:g} {-2 * amp} {period / 2:g} 0"
-    x = start + period / 2
-    while x < W + period:
-        d += f"t{period / 2:g} 0"
-        x += period / 2
+    """An even sine wave with a crest at crest_x once it has scrolled a full period."""
+    start, end = -int(period) - 6, W + int(period) + 6
+    pts = [(x, y + drop - amp * math.cos(2 * math.pi * (x - crest_x) / period))
+           for x in range(start, end + 1, 6)]
+    d = "M" + "L".join(f"{x} {py:.2f}" for x, py in pts)
     if close_to is not None:
-        d += f"V{close_to}H{start:g}Z"
+        d += f"V{close_to}H{start}Z"
     return d
+
+
+def ride_keyframes(amp, period, steps=24):
+    """Keeps the board on the wave: its height and its slope at every moment."""
+    out = []
+    for i in range(steps + 1):
+        f = i / steps
+        y = -amp * math.cos(2 * math.pi * f)
+        slope = -amp * 2 * math.pi / period * math.sin(2 * math.pi * f)
+        out.append(f"{f * 100:.2f}% {{ transform: translateY({y:.2f}px) rotate({math.degrees(math.atan(slope)):.2f}deg); }}")
+    return " ".join(out)
 
 
 def chop_line(y, amp, period):
-    """A low sine-like line, long enough to scroll one period."""
-    d = f"M{-period:g} {y}q{period / 4:g} {-2 * amp} {period / 2:g} 0"
-    x = -period + period / 2
-    while x < W + 2 * period:
-        d += f"t{period / 2:g} 0"
-        x += period / 2
-    return d
+    """A low, even sine line, long enough to scroll one period."""
+    return wave_path(y, amp, period, 0)
 
 
 # --- scenery ---------------------------------------------------------------
@@ -287,7 +289,7 @@ def build():
     k = SURFER_HEIGHT / standing                     # header units per GIF pixel
     rng = random.Random(7)
 
-    half = WAVE_SECS / 2
+    ride_css = ride_keyframes(WAVE_AMP, WAVE_PERIOD)
     crest = WAVE_Y - WAVE_AMP
 
     hills_d = hills(rng)
@@ -333,8 +335,7 @@ def build():
     .ripple.slow {{ animation-duration: 7s; }}
     .chop {{ animation: chop 5s linear infinite; }}
     .wave {{ animation: wave {WAVE_SECS}s linear infinite; }}
-    .bob {{ animation: bob {half}s ease-in-out infinite alternate; }}
-    .tilt {{ animation: tilt {half}s ease-in-out {-half / 2}s infinite alternate; }}
+    .ride {{ animation: ride {WAVE_SECS}s linear infinite; }}
     .splash {{ animation: splash {frames_secs:.3f}s linear infinite; }}
     .strip {{ animation: frames {frames_secs:.3f}s step-end infinite; image-rendering: pixelated; }}
     .spray {{ animation: spray .6s linear infinite; }}
@@ -349,8 +350,7 @@ def build():
     @keyframes drift {{ to {{ stroke-dashoffset: -240; }} }}
     @keyframes chop {{ from {{ transform: translateX(-211.5px); }} to {{ transform: translateX(0); }} }}
     @keyframes wave {{ from {{ transform: translateX(-{WAVE_PERIOD}px); }} to {{ transform: translateX(0); }} }}
-    @keyframes bob {{ from {{ transform: translateY(-{WAVE_AMP}px); }} to {{ transform: translateY({WAVE_AMP}px); }} }}
-    @keyframes tilt {{ from {{ transform: rotate(6deg); }} to {{ transform: rotate(-6deg); }} }}
+    @keyframes ride {{ {ride_css} }}
     @keyframes frames {{ {frames_css} }}
     @keyframes splash {{ {splash_css} }}
     @keyframes spray {{ from {{ transform: translate(0, 0); opacity: .95; }} to {{ transform: translate(-46px, -8px); opacity: 0; }} }}
@@ -391,8 +391,8 @@ def build():
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, drop=28)}" stroke="{FOAM}" stroke-opacity=".14" stroke-width="1.3"/>
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X)}" stroke="{FOAM}" stroke-width="2"/>
 
-    <g class="bob">
-      <g transform="translate({SURFER_X} {WAVE_Y})"><g class="tilt">
+    <g transform="translate({SURFER_X} {WAVE_Y})">
+      <g class="ride"><g>
         <ellipse cx="-4" cy="3" rx="38" ry="3.5" fill="#040a14" opacity=".5"/>
         <g stroke="#fff" stroke-width="1.8">
           <path class="spray" d="M-30 -2h-14"/>
