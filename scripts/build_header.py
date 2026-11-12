@@ -6,8 +6,8 @@ The surfer is read from GIF loops, packed into one sprite strip and embedded in
 the SVG, so the header is a single self-contained file that GitHub can show in
 a README. Everything that moves is plain CSS inside the SVG.
 
-The camera travels with the surfer and her wave, so the wave stays put in the
-frame while the coast, the ships and the small chop slide past to the left.
+The waves roll to the right, the way she is heading, and she rises and tilts
+with each one. The coast and the ships slide past to the left.
 """
 import base64
 import io
@@ -45,13 +45,9 @@ ACCENT = "#5aa9e6"
 FOAM = "#b5d9ff"
 WARM = "#f2c14e"
 
-# The wave she rides. It travels right with her: a sharp crest behind her, a
-# steep hollow face she runs down, and a trough out in front.
-CREST_X, CREST_Y = 170, 94
-FACE_LENGTH, TROUGH_Y = 330, 264
-FACE_CURVE = 2.3      # above 1 makes the face hollow: steep at the top, flat at the foot
-SURFER_AT = 0.43      # how far down the face she sits, 0 = crest, 1 = trough
-
+# The waves she rides: a rolling swell that travels right, under her board.
+SURFER_X = 200
+WAVE_Y, WAVE_AMP, WAVE_PERIOD, WAVE_SECS = 250, 14, 282, 2.7
 
 # --- surfer ----------------------------------------------------------------
 
@@ -107,24 +103,19 @@ def frame_keyframes(timeline, cw):
 
 # --- water -----------------------------------------------------------------
 
-def wave_y(x):
-    """Height of the big wave's surface at x."""
-    if x < CREST_X:                      # the back: a long easy slope
-        return CREST_Y + 92 * (1 - math.exp(-((CREST_X - x) / 150) ** 1.6))
-    s = (x - CREST_X) / FACE_LENGTH
-    if s < 1:                            # the face
-        return TROUGH_Y - (TROUGH_Y - CREST_Y) * (1 - s) ** FACE_CURVE
-    return TROUGH_Y - 5 * (1 - math.exp(-(x - CREST_X - FACE_LENGTH) / 90))
-
-
-def wave_slope(x):
-    return (wave_y(x + 0.5) - wave_y(x - 0.5))
-
-
-def wave_line(drop=0.0, start=-30, end=760, step=5):
-    """The wave's outline, or a line following it `drop` units lower."""
-    pts = [(x, wave_y(x) + drop) for x in range(start, end + 1, step)]
-    return "M" + "L".join(f"{x} {y:.1f}" for x, y in pts)
+def wave_path(y, amp, period, crest_x, drop=0, close_to=None):
+    """A rolling wave with a crest at crest_x once it has scrolled a full period."""
+    start = crest_x - period / 4
+    while start > -period:
+        start -= period
+    d = f"M{start:g} {y + drop}q{period / 4:g} {-2 * amp} {period / 2:g} 0"
+    x = start + period / 2
+    while x < W + period:
+        d += f"t{period / 2:g} 0"
+        x += period / 2
+    if close_to is not None:
+        d += f"V{close_to}H{start:g}Z"
+    return d
 
 
 def chop_line(y, amp, period):
@@ -255,28 +246,18 @@ def build():
     k = SURFER_HEIGHT / standing                     # header units per GIF pixel
     rng = random.Random(7)
 
-    ride_x = CREST_X + FACE_LENGTH * SURFER_AT
-    ride_y = wave_y(ride_x)
-    ride_angle = math.degrees(math.atan(wave_slope(ride_x))) * 0.75
-    foot = CREST_X + FACE_LENGTH
+    half = WAVE_SECS / 2
+    crest = WAVE_Y - WAVE_AMP
 
     hills_d = hills(rng)
     city_tile = skyline(rng)
     stars = "".join(
         f'<circle class="star" cx="{rng.randint(10, W - 10)}" cy="{rng.randint(8, CITY_BASE - 44)}" r="{rng.choice((0.8, 1, 1.2, 1.5))}"/>'
         for _ in range(26))
-    face_lines = "".join(
-        f'<path class="flow" style="animation-delay:{-i * 0.23:.2f}s" d="{wave_line(drop=i * 13 + i * i * 1.5)}" stroke-opacity="{0.55 - i * 0.06:.2f}"/>'
-        for i in range(1, 8))
-    mist = "".join(
-        f'<circle class="mist" style="animation-delay:{-i * 0.21:.2f}s" cx="{CREST_X - 10 + i * 5}" cy="{CREST_Y + (i % 3) * 3}" r="{1.9 - (i % 3) * 0.4:.1f}"/>'
-        for i in range(8))
     moon_x = 700
     moon_path = "".join(
         f'<path class="shimmer" style="animation-delay:{-i * 0.5}s" d="M{moon_x - w / 2:g} {y}h{w}"/>'
         for i, (y, w) in enumerate(((132, 62), (141, 48), (152, 36), (165, 24), (180, 13))))
-    wake = wave_line(drop=-1.5, start=CREST_X + 26, end=int(ride_x) - 8, step=4)
-
     def city():
         return f'<g class="city">{city_tile}<g transform="translate({W})">{city_tile}</g></g>'
 
@@ -289,18 +270,10 @@ def build():
     <linearGradient id="sea" x1="0" x2="0" y1="{WATER}" y2="{H}" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="{SEA_TOP}"/><stop offset="1" stop-color="{SEA_LOW}"/>
     </linearGradient>
-    <linearGradient id="face" x1="0" x2="0" y1="{CREST_Y}" y2="{H}" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#3f84c4"/><stop offset=".3" stop-color="#235489"/><stop offset=".7" stop-color="#12305a"/><stop offset="1" stop-color="#0a1a33"/>
-    </linearGradient>
-    <linearGradient id="tail" x1="{foot + 20}" x2="{foot + 230}" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
-    </linearGradient>
-    <mask id="fade-tail" maskUnits="userSpaceOnUse" x="-40" y="0" width="{W + 80}" height="{H + 20}"><rect x="-40" width="{W + 80}" height="{H + 20}" fill="url(#tail)"/></mask>
-    <linearGradient id="wake" x1="{CREST_X + 26}" x2="{ride_x:.0f}" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".85"/>
+    <linearGradient id="face" x1="0" x2="0" y1="{crest}" y2="{H}" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2c629c"/><stop offset=".45" stop-color="#163a67"/><stop offset="1" stop-color="#0a1a33"/>
     </linearGradient>
     <radialGradient id="glow"><stop offset="0" stop-color="#cfe3ff" stop-opacity=".32"/><stop offset="1" stop-color="#cfe3ff" stop-opacity="0"/></radialGradient>
-    <clipPath id="in-wave"><path d="{wave_line()}V{H + 10}H-30Z"/></clipPath>
   </defs>
   <style>
     .star {{ animation: twinkle 5s ease-in-out infinite alternate; }}
@@ -314,14 +287,10 @@ def build():
     .shimmer {{ animation: shimmer 1.8s ease-in-out infinite alternate; }}
     .ripple {{ animation: drift 4s linear infinite; }}
     .ripple.slow {{ animation-duration: 7s; }}
-    .chop {{ animation: chop 2.6s linear infinite; }}
-    .chop.near {{ animation-duration: 1.7s; }}
-    .heave {{ animation: heave 3.2s ease-in-out infinite alternate; }}
-    .flow {{ animation: flow 1s linear infinite; }}
-    .wake {{ animation: flow .7s linear infinite; }}
-    .mist {{ animation: mist 1.5s linear infinite; }}
-    .bob {{ animation: bob .9s ease-in-out infinite alternate; }}
-    .tilt {{ animation: tilt 1.3s ease-in-out infinite alternate; }}
+    .chop {{ animation: chop 3.4s linear infinite; }}
+    .wave {{ animation: wave {WAVE_SECS}s linear infinite; }}
+    .bob {{ animation: bob {half}s ease-in-out infinite alternate; }}
+    .tilt {{ animation: tilt {half}s ease-in-out {-half / 2}s infinite alternate; }}
     .strip {{ animation: frames {frames_secs:.3f}s step-end infinite; image-rendering: pixelated; }}
     .spray {{ animation: spray .6s linear infinite; }}
     .spray.b {{ animation-delay: -.2s; }}
@@ -332,13 +301,11 @@ def build():
     @keyframes pass {{ from {{ transform: translateX({W + 150}px); }} to {{ transform: translateX(-150px); }} }}
     @keyframes rock {{ from {{ transform: rotate(-.8deg); }} to {{ transform: rotate(.8deg); }} }}
     @keyframes shimmer {{ from {{ opacity: 1; transform: translateX(-2px); }} to {{ opacity: .35; transform: translateX(2px); }} }}
-    @keyframes drift {{ to {{ stroke-dashoffset: 240; }} }}
-    @keyframes chop {{ to {{ transform: translateX(-141px); }} }}
-    @keyframes heave {{ from {{ transform: translateY(-2px); }} to {{ transform: translateY(2px); }} }}
-    @keyframes flow {{ to {{ stroke-dashoffset: 110; }} }}
-    @keyframes mist {{ from {{ transform: translate(0, 0); opacity: .95; }} to {{ transform: translate(-46px, -16px); opacity: 0; }} }}
-    @keyframes bob {{ from {{ transform: translateY(-1.5px); }} to {{ transform: translateY(1.5px); }} }}
-    @keyframes tilt {{ from {{ transform: rotate(-2deg); }} to {{ transform: rotate(2deg); }} }}
+    @keyframes drift {{ to {{ stroke-dashoffset: -240; }} }}
+    @keyframes chop {{ from {{ transform: translateX(-141px); }} to {{ transform: translateX(0); }} }}
+    @keyframes wave {{ from {{ transform: translateX(-{WAVE_PERIOD}px); }} to {{ transform: translateX(0); }} }}
+    @keyframes bob {{ from {{ transform: translateY(-{WAVE_AMP}px); }} to {{ transform: translateY({WAVE_AMP}px); }} }}
+    @keyframes tilt {{ from {{ transform: rotate(9deg); }} to {{ transform: rotate(-9deg); }} }}
     @keyframes frames {{ {frames_css} }}
     @keyframes spray {{ from {{ transform: translate(0, 0); opacity: .95; }} to {{ transform: translate(-46px, -8px); opacity: 0; }} }}
     @media (prefers-reduced-motion: reduce) {{ * {{ animation: none !important; }} }}
@@ -372,32 +339,25 @@ def build():
     {ship(container_ship(), 150, 0.6, 110, -48)}
     {ship(cruise_ship(), 218, 1.35, 46, -11)}
 
-    <path class="chop" d="{chop_line(236, 3.5, 141)}" stroke="{LINE}" stroke-opacity=".55" stroke-width="1.2"/>
-    <path class="chop near" d="{chop_line(TROUGH_Y - 4, 4.5, 141)}" stroke="{ACCENT}" stroke-width="1.6"/>
+    <path class="chop" d="{chop_line(228, 3.5, 141)}" stroke="{LINE}" stroke-opacity=".55" stroke-width="1.2"/>
 
-    <g class="heave">
-      <g mask="url(#fade-tail)">
-        <path d="{wave_line()}V{H + 10}H-30Z" fill="url(#face)"/>
-        <g clip-path="url(#in-wave)" stroke="{FOAM}" stroke-width="1.3" stroke-dasharray="46 64">{face_lines}</g>
-        <path d="{wave_line()}" stroke="{FOAM}" stroke-width="2"/>
-      </g>
-      <path d="{wave_line(start=CREST_X - 34, end=CREST_X + 22, step=4)}" stroke="#fff" stroke-opacity=".9" stroke-width="3.2"/>
-      <g fill="#fff">{mist}</g>
-      <path class="wake" d="{wake}" stroke="url(#wake)" stroke-width="3" stroke-dasharray="16 8"/>
+    <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, close_to=H + 10)}" fill="url(#face)"/>
+    <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, drop=13)}" stroke="{FOAM}" stroke-opacity=".28" stroke-width="1.3"/>
+    <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, drop=28)}" stroke="{FOAM}" stroke-opacity=".14" stroke-width="1.3"/>
+    <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X)}" stroke="{FOAM}" stroke-width="2"/>
 
-      <g transform="translate({ride_x:.1f} {ride_y:.1f}) rotate({ride_angle:.1f})">
-        <ellipse cx="-6" cy="4" rx="40" ry="4" fill="#040a14" opacity=".5"/>
-        <g class="bob"><g class="tilt">
-          <g stroke="#fff" stroke-width="1.8">
-            <path class="spray" d="M-30 -2h-14"/>
-            <path class="spray b" d="M-34 -9h-10"/>
-            <path class="spray c" d="M-26 3h-18"/>
-          </g>
-          <svg x="{-ax * k:.2f}" y="{-ay * k + 5:.2f}" width="{cw * k:.2f}" height="{ch * k:.2f}" viewBox="0 0 {cw} {ch}">
-            <image class="strip" width="{cw * n_cells}" height="{ch}" href="data:image/png;base64,{b64}"/>
-          </svg>
-        </g></g>
-      </g>
+    <g class="bob">
+      <g transform="translate({SURFER_X} {WAVE_Y})"><g class="tilt">
+        <ellipse cx="-4" cy="3" rx="38" ry="3.5" fill="#040a14" opacity=".5"/>
+        <g stroke="#fff" stroke-width="1.8">
+          <path class="spray" d="M-30 -2h-14"/>
+          <path class="spray b" d="M-34 -9h-10"/>
+          <path class="spray c" d="M-26 3h-18"/>
+        </g>
+        <svg x="{-ax * k:.2f}" y="{-ay * k + 5:.2f}" width="{cw * k:.2f}" height="{ch * k:.2f}" viewBox="0 0 {cw} {ch}">
+          <image class="strip" width="{cw * n_cells}" height="{ch}" href="data:image/png;base64,{b64}"/>
+        </svg>
+      </g></g>
     </g>
   </g>
 </svg>
