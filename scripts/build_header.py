@@ -1,4 +1,4 @@
-"""Builds assets/header.svg: a night sea with a pixel-art surfer riding a tall wave.
+"""Builds assets/header.svg and assets/footer.svg: a sea with a pixel-art surfer.
 
 Usage:  python scripts/build_header.py
 
@@ -542,5 +542,151 @@ def build():
           f"({n_cells} frames, {cw}x{ch}, {frames_secs:.1f}s cycle)")
 
 
+# --- footer ----------------------------------------------------------------
+
+FOOTER_OUT = ASSETS / "footer.svg"
+FOOTER_H = 112
+FOOTER_SEA = 46                      # where the footer's sea meets its sky
+FOOTER_SURFER = 58                   # her drawn height down here
+F_WAVE_Y, F_WAVE_AMP, F_WAVE_PERIOD, F_WAVE_SECS = 90, 6, 211.5, 3.0
+F_CROSS_SECS = 30                    # how long she takes to cross the strip
+
+
+def shrink_strip(b64, cw, ch, cells, target_h):
+    """Scales the sprite strip down so a small surfer does not cost a big file."""
+    f = target_h / ch
+    new_cw, new_ch = max(1, round(cw * f)), max(1, round(ch * f))
+    strip = Image.open(io.BytesIO(base64.b64decode(b64))).convert("RGBA")
+    strip = strip.resize((new_cw * cells, new_ch), Image.Resampling.LANCZOS)
+    buf = io.BytesIO()
+    strip.quantize(255, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(
+        buf, "PNG", optimize=True)
+    return base64.b64encode(buf.getvalue()).decode(), new_cw, new_ch, new_cw / cw
+
+
+def build_footer():
+    """Builds assets/footer.svg: a slim strip of the same sea to close the page.
+
+    She crosses it from left to right on smaller waves, under the same turning
+    sky as the header.
+    """
+    b64, cw, ch, ax, ay, timeline, standing = load_sprites([(SURF, 1, 1.35, True)])
+    cells = max(i for i, _, _ in timeline) + 1
+    b64, cw, ch, f = shrink_strip(b64, cw, ch, cells, FOOTER_SURFER * 2.5)
+    ax, ay, standing = ax * f, ay * f, standing * f
+    frames_css, frames_secs = frame_keyframes(timeline, cw)
+    k = FOOTER_SURFER / standing
+    sink = 5
+    rng = random.Random(11)
+
+    # She moves right, slower than the waves, so they overtake her from behind.
+    # Her path is a whole number of waves long, so the bobbing never jumps.
+    travel = 5 * F_WAVE_PERIOD
+    start_x = -(travel - W) / 2
+    speed = travel / F_CROSS_SECS
+    wave_speed = F_WAVE_PERIOD / F_WAVE_SECS
+    bob = F_WAVE_PERIOD / (wave_speed - speed)
+    delay = -9.0
+    phase = ((start_x - speed * delay) / F_WAVE_PERIOD) % 1
+    ride_style = f"animation-duration:{bob:.3f}s;animation-delay:{phase * bob - bob:.3f}s"
+    cross_style = f"animation-delay:{delay}s"
+
+    # The strip of hills repeats, so both ends sit at the same height.
+    pts, x = [(0, FOOTER_SEA), (0, FOOTER_SEA - 8)], 0
+    while x < W - 80:
+        x += rng.randint(40, 90)
+        pts.append((x, FOOTER_SEA - rng.randint(5, 17)))
+    pts += [(W, FOOTER_SEA - 8), (W, FOOTER_SEA)]
+    hills_d = "M" + "L".join(f"{px} {py}" for px, py in pts) + "Z"
+    stars = "".join(
+        f'<circle class="star" cx="{rng.randint(10, W - 10)}" cy="{rng.randint(5, FOOTER_SEA - 20)}" r="{rng.choice((0.8, 1, 1.2))}"/>'
+        for _ in range(18))
+    crest = F_WAVE_Y - F_WAVE_AMP
+
+    def surfer(inner):
+        return (f'<g transform="translate(0 {F_WAVE_Y})"><g class="cross" style="{cross_style}">'
+                f'<g class="ride" style="{ride_style}">{inner}</g></g></g>')
+
+    sprite = (f'<svg x="{-ax * k:.2f}" y="{-ay * k + sink:.2f}" width="{cw * k:.2f}" height="{ch * k:.2f}" '
+              f'viewBox="0 0 {cw} {ch}"><use class="strip" href="#sheet"/></svg>')
+
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {FOOTER_H}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <clipPath id="panel"><rect width="{W}" height="{FOOTER_H}" rx="11"/></clipPath>
+    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="{FOOTER_SEA}" gradientUnits="userSpaceOnUse">
+      <stop class="c-sky-top" offset="0" stop-color="{SKY_TOP}"/><stop class="c-sky-low" offset="1" stop-color="{SKY_LOW}"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" x2="0" y1="{FOOTER_SEA}" y2="{FOOTER_H}" gradientUnits="userSpaceOnUse">
+      <stop class="c-sea-top" offset="0" stop-color="{SEA_TOP}"/><stop class="c-sea-low" offset="1" stop-color="{SEA_LOW}"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" x2="0" y1="{crest}" y2="{FOOTER_H}" gradientUnits="userSpaceOnUse">
+      <stop class="c-face-a" offset="0" stop-color="#2c629c"/><stop class="c-face-b" offset=".45" stop-color="#163a67"/><stop class="c-face-c" offset="1" stop-color="#0a1a33"/>
+    </linearGradient>
+    <linearGradient id="dusk" x1="0" x2="0" y1="{FOOTER_SEA - 34}" y2="{FOOTER_SEA}" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff9a5a" stop-opacity="0"/><stop offset="1" stop-color="#ff9a5a" stop-opacity=".6"/>
+    </linearGradient>
+    <clipPath id="below"><rect x="-80" y="1" width="160" height="80"/></clipPath>
+    <image id="sheet" width="{cw * cells}" height="{ch}" href="data:image/png;base64,{b64}"/>
+  </defs>
+  <style>
+    {daylight_css()}
+    .star {{ animation: twinkle 5s ease-in-out infinite alternate; }}
+    .star:nth-child(2n) {{ animation-delay: -2s; }}
+    .star:nth-child(3n) {{ animation-delay: -3.5s; }}
+    .hills {{ animation: scroll 150s linear infinite; }}
+    .pass {{ animation: pass linear infinite; }}
+    .rock {{ animation: rock 3.4s ease-in-out infinite alternate; }}
+    .shimmer {{ animation: shimmer 1.8s ease-in-out infinite alternate; }}
+    .ripple {{ animation: drift 8s linear infinite; }}
+    .wave {{ animation: wave {F_WAVE_SECS}s linear infinite; }}
+    .cross {{ animation: cross {F_CROSS_SECS}s linear infinite; }}
+    .ride {{ animation: ride linear infinite; }}
+    .strip {{ animation: frames {frames_secs:.3f}s step-end infinite; }}
+    .spray {{ animation: spray .6s linear infinite; }}
+    .spray.b {{ animation-delay: -.3s; }}
+    @keyframes twinkle {{ from {{ opacity: 1; }} to {{ opacity: .3; }} }}
+    @keyframes scroll {{ to {{ transform: translateX(-{W}px); }} }}
+    @keyframes pass {{ from {{ transform: translateX({W + 150}px); }} to {{ transform: translateX(-150px); }} }}
+    @keyframes rock {{ from {{ transform: rotate(-.8deg); }} to {{ transform: rotate(.8deg); }} }}
+    @keyframes shimmer {{ from {{ opacity: 1; transform: translateX(-2px); }} to {{ opacity: .35; transform: translateX(2px); }} }}
+    @keyframes drift {{ to {{ stroke-dashoffset: -240; }} }}
+    @keyframes wave {{ from {{ transform: translateX(-{F_WAVE_PERIOD}px); }} to {{ transform: translateX(0); }} }}
+    @keyframes cross {{ from {{ transform: translateX({start_x}px); }} to {{ transform: translateX({start_x + travel}px); }} }}
+    @keyframes ride {{ {ride_keyframes(F_WAVE_AMP, F_WAVE_PERIOD)} }}
+    @keyframes frames {{ {frames_css} }}
+    @keyframes spray {{ from {{ transform: translate(0, 0); opacity: .95; }} to {{ transform: translate(-22px, -4px); opacity: 0; }} }}
+    @media (prefers-reduced-motion: reduce) {{ * {{ animation: none !important; }} }}
+  </style>
+
+  <g clip-path="url(#panel)">
+    <rect width="{W}" height="{FOOTER_H}" fill="url(#sky)"/>
+    <g class="c-stars" fill="#c9d6ea">{stars}</g>
+    <rect class="c-dusk" y="{FOOTER_SEA - 34}" width="{W}" height="34" fill="url(#dusk)"/>
+    <g class="hills" fill="{LAND}" stroke="{LINE}" stroke-opacity=".4" stroke-width="1">
+      <path class="c-hill" d="{hills_d}"/><path class="c-hill" d="{hills_d}" transform="translate({W})"/>
+    </g>
+    <rect y="{FOOTER_SEA}" width="{W}" height="{FOOTER_H - FOOTER_SEA}" fill="url(#sea)"/>
+
+    <g stroke="{LINE}" stroke-width="1.1" stroke-opacity=".4">
+      <path class="ripple" d="M0 {FOOTER_SEA + 8}H{W}" stroke-dasharray="40 200"/>
+      <path class="ripple" style="animation-delay:-3s" d="M0 {FOOTER_SEA + 19}H{W}" stroke-dasharray="64 176"/>
+    </g>
+
+    {ship(container_ship(), FOOTER_SEA + 14, 0.42, 130, -52)}
+
+    {surfer(sprite)}
+    <path class="wave" d="{wave_path(F_WAVE_Y, F_WAVE_AMP, F_WAVE_PERIOD, 0, close_to=FOOTER_H + 10)}" fill="url(#face)"/>
+    {surfer(f'<g clip-path="url(#below)" opacity=".3"><g transform="scale(1 -.75)">{sprite}</g></g>')}
+    <path class="wave" d="{wave_path(F_WAVE_Y, F_WAVE_AMP, F_WAVE_PERIOD, 0, drop=9)}" stroke="{FOAM}" stroke-opacity=".22" stroke-width="1.2"/>
+    <path class="wave" d="{wave_path(F_WAVE_Y, F_WAVE_AMP, F_WAVE_PERIOD, 0)}" stroke="{FOAM}" stroke-width="1.8"/>
+    {surfer('<g stroke="#fff" stroke-width="1.4"><path class="spray" d="M-14 -1h-8"/><path class="spray b" d="M-16 -5h-6"/></g>')}
+  </g>
+</svg>
+"""
+    FOOTER_OUT.write_text(svg, encoding="utf-8", newline="\n")
+    print(f"wrote {FOOTER_OUT.relative_to(ROOT)}  {FOOTER_OUT.stat().st_size / 1024:.0f} KB")
+
+
 if __name__ == "__main__":
     build()
+    build_footer()

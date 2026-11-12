@@ -35,3 +35,7 @@ FFmpeg wrapper with automatic GPU acceleration, a terminal wizard and a local we
 ## Stack
 
 Python &nbsp;·&nbsp; Rust &nbsp;·&nbsp; C++
+
+<br />
+
+<img src="./assets/footer.svg" alt="" width="100%" />
