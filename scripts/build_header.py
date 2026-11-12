@@ -281,30 +281,17 @@ def container_ship():
         <g fill="{WARM}">{bridge}{deck_lights}</g>"""
 
 
-PASS_TRAVEL = 3 * WAVE_PERIOD   # a whole number of waves, so a ship's bobbing never jumps
-
-
-def ship(body, scale, secs, delay):
-    """A ship sliding left past the camera, floating on the same waves as the surfer.
-
-    Returns (the ship, to draw behind the wave; its lights on the water, to draw in front).
-    """
-    # The ship meets the waves head on, so they pass under it faster than they
-    # pass under her. Work out how often, and where in a wave it starts.
-    speed = PASS_TRAVEL / secs
-    wave_speed = WAVE_PERIOD / WAVE_SECS
-    bob = WAVE_PERIOD / (speed + wave_speed)
-    start_x = W + (PASS_TRAVEL - W) / 2
-    phase = ((start_x + speed * delay - SURFER_X) / WAVE_PERIOD) % 1
-    wrap = (f'<g transform="translate(0 {WAVE_Y + 2})"><g class="pass" style="animation-duration:{secs}s;animation-delay:{delay}s">'
-            f'<g class="float" style="animation-duration:{bob:.3f}s;animation-delay:{phase * bob - bob:.3f}s"><g transform="scale({scale})">')
-    close = "</g></g></g></g>"
+def ship(body, waterline, scale, secs, delay):
+    """A ship sliding left past the camera, with its shadow and reflection."""
     streaks = "".join(
         f'<path class="shimmer" style="animation-delay:{-i * 0.7}s" d="M{-w / 2:g} {y}h{w}"/>'
-        for i, (y, w) in enumerate(((5, 120), (10, 90), (16, 58), (23, 28))))
-    behind = f'{wrap}<rect x="-72" y="-1" width="134" height="22" fill="{HULL}"/>{body}{close}'
-    front = f'{wrap}<g stroke="{WARM}" stroke-width="1.2" opacity=".5">{streaks}</g>{close}'
-    return behind, front
+        for i, (y, w) in enumerate(((4, 120), (9, 86), (15, 52), (22, 24))))
+    return f"""<g transform="translate(0 {waterline})"><g class="pass" style="animation-duration:{secs}s;animation-delay:{delay}s"><g transform="scale({scale})">
+        <ellipse cx="0" cy="2" rx="84" ry="3.5" fill="#040a14" opacity=".6"/>
+        <g transform="scale(1 -.55)" opacity=".22">{body}</g>
+        <g stroke="{WARM}" stroke-width="1.2" opacity=".45">{streaks}</g>
+        <g class="rock">{body}</g>
+      </g></g></g>"""
 
 
 def build():
@@ -316,8 +303,6 @@ def build():
     rng = random.Random(7)
 
     ride_css = ride_keyframes(WAVE_AMP, WAVE_PERIOD)
-    float_css = ride_keyframes(WAVE_AMP * 0.85, WAVE_PERIOD, tilt=0.3)
-    ships = [ship(container_ship(), 0.95, 84, -40), ship(cruise_ship(), 1.35, 46, -11)]
     crest = WAVE_Y - WAVE_AMP
 
     hills_d = hills(rng)
@@ -360,7 +345,7 @@ def build():
     .city {{ animation: scroll 55s linear infinite; }}
     .blink {{ animation: blink 2.4s steps(1) infinite; }}
     .pass {{ animation: pass linear infinite; }}
-    .float {{ animation: float linear infinite; }}
+    .rock {{ animation: rock 3.4s ease-in-out infinite alternate; }}
     .shimmer {{ animation: shimmer 1.8s ease-in-out infinite alternate; }}
     .ripple {{ animation: drift 4s linear infinite; }}
     .ripple.slow {{ animation-duration: 7s; }}
@@ -374,8 +359,8 @@ def build():
     @keyframes twinkle {{ from {{ opacity: 1; }} to {{ opacity: .3; }} }}
     @keyframes scroll {{ to {{ transform: translateX(-{W}px); }} }}
     @keyframes blink {{ 0% {{ opacity: 1; }} 55% {{ opacity: .15; }} }}
-    @keyframes pass {{ from {{ transform: translateX({W + (PASS_TRAVEL - W) / 2}px); }} to {{ transform: translateX(-{(PASS_TRAVEL - W) / 2}px); }} }}
-    @keyframes float {{ {float_css} }}
+    @keyframes pass {{ from {{ transform: translateX({W + 150}px); }} to {{ transform: translateX(-150px); }} }}
+    @keyframes rock {{ from {{ transform: rotate(-.8deg); }} to {{ transform: rotate(.8deg); }} }}
     @keyframes shimmer {{ from {{ opacity: 1; transform: translateX(-2px); }} to {{ opacity: .35; transform: translateX(2px); }} }}
     @keyframes drift {{ to {{ stroke-dashoffset: -240; }} }}
     @keyframes wave {{ from {{ transform: translateX(-{WAVE_PERIOD}px); }} to {{ transform: translateX(0); }} }}
@@ -412,8 +397,8 @@ def build():
       <path class="ripple" d="M0 196H{W}" stroke-dasharray="84 156" stroke-dashoffset="150"/>
     </g>
 
-    {ships[0][0]}
-    {ships[1][0]}
+    {ship(container_ship(), 150, 0.6, 110, -48)}
+    {ship(cruise_ship(), 218, 1.35, 46, -11)}
 
     <g transform="translate({SURFER_X} {WAVE_Y})">
       <g class="ride">
@@ -427,8 +412,6 @@ def build():
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, drop=13)}" stroke="{FOAM}" stroke-opacity=".28" stroke-width="1.3"/>
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, drop=28)}" stroke="{FOAM}" stroke-opacity=".14" stroke-width="1.3"/>
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X)}" stroke="{FOAM}" stroke-width="2"/>
-    {ships[0][1]}
-    {ships[1][1]}
 
     <g transform="translate({SURFER_X} {WAVE_Y})">
       <g class="ride">
