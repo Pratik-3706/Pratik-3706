@@ -1,41 +1,37 @@
-<div align="center">
-  <img src="./assets/hydro-stage-banner.png" alt="Moonlit water stage" width="100%" />
+<img src="./assets/header.svg" alt="Furina surfing a moonlit sea" width="100%" />
 
-  <h1>Welcome &nbsp;<img src="./assets/hydro-ornament.png" alt="Hydro ornament" width="28" valign="middle" /></h1>
-  <p><b>Computer Engineering &nbsp;·&nbsp; AI &amp; Machine Learning &nbsp;·&nbsp; Systems Design</b></p>
-</div>
+<img src="https://github.com/user-attachments/assets/cd0843a4-9c1a-489f-a6e8-1223089830ac" alt="Furina" width="150" align="right" />
 
-<hr />
+### Hi, I'm Pratik
 
-### About
+Computer Engineering student.
 
-I'm a Computer Engineering student focused on AI, ML systems, and system architecture & design.
+I build AI agents and small ML models, mostly in Rust and Python, and usually from scratch to see how they work.
 
+[Portfolio](https://pratik-3706.github.io/my_portfolio/) &nbsp;·&nbsp; [Hugging Face](https://huggingface.co/Pratik-3706)
 
-Also check: 
+<br clear="right" />
 
+## Projects
 
-[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/Pratik-3706)
+**[Norvexum](https://github.com/Pratik-3706/Norvexum)** &nbsp; <sub>Rust</sub><br />
+AI coding agent for the terminal, with parallel tool calls and a workspace sandbox.
 
-My Portfolio : https://pratik-3706.github.io/my_portfolio/
+**[Vivy](https://github.com/Pratik-3706/Vivy)** &nbsp; <sub>Rust · Kotlin · React</sub><br />
+An AI that uses your Android phone for you, over Wi-Fi, with no root or adb.
 
+**[swarm_mcp](https://github.com/Pratik-3706/swarm_mcp)** &nbsp; <sub>JavaScript</sub><br />
+MCP server that lets several coding agents work on one project as a team.
 
-<br />
+**[BadApple_nn](https://github.com/Pratik-3706/BadApple_nn)** &nbsp; <sub>PyTorch</sub><br />
+The whole Bad Apple video, stored in a 4 MB neural network.
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <b>Languages</b><br />
-      <code>Python</code> &nbsp; <code>C++</code> &nbsp; <code>Rust</code>
-    </td>
-    <td width="50%" valign="top">
-      <b>Domains &amp; Focus</b><br />
-      <code>AI</code> &nbsp; <code>ML Systems</code> &nbsp; <code>System Architecture &amp; Design</code>
-    </td>
-  </tr>
-</table>
+**[JustAnEpoch](https://github.com/Pratik-3706/JustAnEpoch)** &nbsp; <sub>PyTorch</sub><br />
+GPT-style transformer and BPE tokenizer from scratch. 23M parameters of confident gibberish.
 
-<div align="center">
-  <br />
-  <img src="https://github.com/user-attachments/assets/cd0843a4-9c1a-489f-a6e8-1223089830ac" width="220" alt="Furina" />
-</div>
+**[Obsidian_Codec](https://github.com/Pratik-3706/Obsidian_Codec)** &nbsp; <sub>Python</sub><br />
+FFmpeg wrapper with automatic GPU acceleration, a terminal wizard and a local web UI.
+
+## Stack
+
+Python &nbsp;·&nbsp; Rust &nbsp;·&nbsp; C++
