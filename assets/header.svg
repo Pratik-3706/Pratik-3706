@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="30.8 27.3 769.1 272.7" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <defs>
+    <linearGradient id="trail" x1="0" y1="0" x2="34" y2="-12" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <clipPath id="panel"><rect x="30.8" y="27.3" width="769.1" height="272.7" rx="11"/></clipPath>
     <linearGradient id="sky" x1="0" x2="0" y1="0" y2="126" gradientUnits="userSpaceOnUse">
       <stop class="c-sky-top" offset="0" stop-color="#070d1a"/><stop class="c-sky-low" offset="1" stop-color="#14294a"/>
@@ -45,6 +46,11 @@
     .c-hull { animation: c-hull 48s linear infinite; } @keyframes c-hull { 0%, 32% { fill: #0d1a2e; } 44%, 81% { fill: #27405f; } 93%, 100% { fill: #0d1a2e; } }
     .c-deck { animation: c-deck 48s linear infinite; } @keyframes c-deck { 0%, 32% { fill: #1b2d49; } 44%, 81% { fill: #f3f6fa; } 93%, 100% { fill: #1b2d49; } }
     .c-dusk { animation: c-dusk 48s linear infinite; } @keyframes c-dusk { 0%, 32% { opacity: 0; } 38% { opacity: 0.75; } 44%, 81% { opacity: 0; } 87% { opacity: 0.75; } 93%, 100% { opacity: 0; } }
+    .c-sand { animation: c-sand 48s linear infinite; } @keyframes c-sand { 0%, 32% { fill: #262f4c; } 38% { fill: #b08d7c; } 44%, 81% { fill: #ecdcae; } 87% { fill: #b08d7c; } 93%, 100% { fill: #262f4c; } }
+    .c-wet { animation: c-wet 48s linear infinite; } @keyframes c-wet { 0%, 32% { fill: #1a2340; } 38% { fill: #8a7066; } 44%, 81% { fill: #cbb98a; } 87% { fill: #8a7066; } 93%, 100% { fill: #1a2340; } }
+    .c-cliff { animation: c-cliff 48s linear infinite; } @keyframes c-cliff { 0%, 32% { fill: #0f1b34; } 38% { fill: #6c6682; } 44%, 81% { fill: #b3c0c8; } 87% { fill: #6c6682; } 93%, 100% { fill: #0f1b34; } }
+    .c-grass { animation: c-grass 48s linear infinite; } @keyframes c-grass { 0%, 32% { stroke: #16304a; } 38% { stroke: #5a6478; } 44%, 81% { stroke: #7fb08a; } 87% { stroke: #5a6478; } 93%, 100% { stroke: #16304a; } }
+    .shoot0 { animation: shoot0 41s linear -28s infinite; } @keyframes shoot0 { 0%, 97.561% { opacity: 0; transform: translate(0, 0); } 97.927% { opacity: 1; } 99.268% { opacity: 1; } 100% { opacity: 0; transform: translate(-150px, 38px); } } .shoot1 { animation: shoot1 67s linear -32s infinite; } @keyframes shoot1 { 0%, 98.507% { opacity: 0; transform: translate(0, 0); } 98.731% { opacity: 1; } 99.552% { opacity: 1; } 100% { opacity: 0; transform: translate(-120px, 44px); } } 
     .sun { animation: sun 48s linear infinite; }
     .moon { animation: moon 48s linear infinite; }
     .c-moonpath { animation: moonpath 48s linear infinite; }
@@ -84,6 +90,7 @@
   <g clip-path="url(#panel)">
     <rect width="846" height="300" fill="url(#sky)"/>
     <g class="c-stars" fill="#c9d6ea"><circle class="star" cx="60" cy="53" r="1.5"/><circle class="star" cx="210" cy="31" r="1.5"/><circle class="star" cx="207" cy="28" r="1.2"/><circle class="star" cx="765" cy="38" r="0.8"/><circle class="star" cx="656" cy="34" r="1"/><circle class="star" cx="650" cy="57" r="1.5"/><circle class="star" cx="51" cy="32" r="0.8"/><circle class="star" cx="485" cy="12" r="0.8"/><circle class="star" cx="273" cy="20" r="0.8"/><circle class="star" cx="630" cy="29" r="1.2"/><circle class="star" cx="288" cy="29" r="0.8"/><circle class="star" cx="278" cy="55" r="1.2"/><circle class="star" cx="292" cy="27" r="0.8"/><circle class="star" cx="748" cy="56" r="0.8"/><circle class="star" cx="34" cy="60" r="1"/><circle class="star" cx="119" cy="38" r="1.5"/><circle class="star" cx="804" cy="32" r="1.2"/><circle class="star" cx="450" cy="60" r="1.5"/><circle class="star" cx="145" cy="39" r="1"/><circle class="star" cx="18" cy="59" r="1.2"/><circle class="star" cx="718" cy="57" r="1"/><circle class="star" cx="631" cy="23" r="1.2"/><circle class="star" cx="337" cy="37" r="1.2"/><circle class="star" cx="812" cy="58" r="0.8"/><circle class="star" cx="534" cy="20" r="1.5"/><circle class="star" cx="780" cy="18" r="1"/></g>
+    <g class="c-glow"><g transform="translate(600 36)"><g class="shoot0"><path d="M0 0L34 -12" stroke="url(#trail)" stroke-width="1.5"/><circle r="1.4" fill="#fff"/></g></g><g transform="translate(340 33)"><g class="shoot1"><path d="M0 0L34 -12" stroke="url(#trail)" stroke-width="1.5"/><circle r="1.4" fill="#fff"/></g></g></g>
     <g class="moon">
       <circle r="62" fill="url(#glow)"/>
       <circle r="25" fill="#dbe9ff" fill-opacity=".14" stroke="#b5d9ff" stroke-width="1.5"/>

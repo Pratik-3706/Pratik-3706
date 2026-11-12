@@ -172,13 +172,13 @@ def sky_xy(u):
     return W - 56 - (W - 112) * u, 150 - 92 * math.sin(math.pi * u)
 
 
-def sky_keyframes(body, steps=12):
+def sky_keyframes(body, steps=12, xy=None):
     """CSS keyframes that carry the sun or the moon over the sky in a low arc.
 
     Both wait below the horizon, hidden behind the sea, while the other is up.
     """
     def at(pct, u):
-        x, y = sky_xy(u)
+        x, y = (xy or sky_xy)(u)
         return f"{pct:.2f}% {{ transform: translate({x:.1f}px, {y:.1f}px); }}"
 
     day, night = SUNSET - SUNRISE, 100 - (SUNSET - SUNRISE)
@@ -190,6 +190,27 @@ def sky_keyframes(body, steps=12):
         down = [at(SUNSET + (100 - SUNSET) * i / 4, start * i / 4) for i in range(5)]
         frames = up + down
     return " ".join(frames)
+
+
+def shooting_stars(spots, name="shoot", streak=1.0):
+    """Once in a while a star falls across the night sky. Returns (markup, css, gradient).
+
+    spots is a list of (x, y, seconds between falls, seconds until the first one,
+    dx, dy). The gaps are long and share no common rhythm, so the falls feel
+    occasional rather than timed. Each streak lasts `streak` seconds.
+    """
+    stars, css = "", ""
+    for i, (x, y, secs, first, dx, dy) in enumerate(spots):
+        a = 100 - streak / secs * 100                 # the streak is the last moment of each gap
+        stars += (f'<g transform="translate({x} {y})"><g class="{name}{i}">'
+                  f'<path d="M0 0L34 -12" stroke="url(#trail)" stroke-width="1.5"/><circle r="1.4" fill="#fff"/></g></g>')
+        css += (f".{name}{i} {{ animation: {name}{i} {secs}s linear {first + streak - secs:g}s infinite; }} "
+                f"@keyframes {name}{i} {{ 0%, {a:.3f}% {{ opacity: 0; transform: translate(0, 0); }} "
+                f"{a + (100 - a) * 0.15:.3f}% {{ opacity: 1; }} {a + (100 - a) * 0.7:.3f}% {{ opacity: 1; }} "
+                f"100% {{ opacity: 0; transform: translate({dx}px, {dy}px); }} }} ")
+    grad = ('<linearGradient id="trail" x1="0" y1="0" x2="34" y2="-12" gradientUnits="userSpaceOnUse">'
+            '<stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>')
+    return f'<g class="c-glow">{stars}</g>', css, grad
 
 
 def daylight_css():
@@ -381,6 +402,7 @@ def build():
     rng = random.Random(7)
 
     ride_css = ride_keyframes(WAVE_AMP, WAVE_PERIOD)
+    shoot_svg, shoot_css, shoot_grad = shooting_stars(((600, 36, 41, 12, -150, 38), (340, 33, 67, 34, -120, 44)))
     crest = WAVE_Y - WAVE_AMP
 
     hills_d = hills(rng)
@@ -397,6 +419,7 @@ def build():
 
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="{VIEW_X:.1f} {VIEW_Y:.1f} {VIEW_W:.1f} {VIEW_H:.1f}" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <defs>
+    {shoot_grad}
     <clipPath id="panel"><rect x="{VIEW_X:.1f}" y="{VIEW_Y:.1f}" width="{VIEW_W:.1f}" height="{VIEW_H:.1f}" rx="11"/></clipPath>
     <linearGradient id="sky" x1="0" x2="0" y1="0" y2="{WATER}" gradientUnits="userSpaceOnUse">
       <stop class="c-sky-top" offset="0" stop-color="{SKY_TOP}"/><stop class="c-sky-low" offset="1" stop-color="{SKY_LOW}"/>
@@ -426,6 +449,7 @@ def build():
     .star:nth-child(2n) {{ animation-delay: -2s; }}
     .star:nth-child(3n) {{ animation-delay: -3.5s; }}
     {daylight_css()}
+    {shoot_css}
     .sun {{ animation: sun {CYCLE}s linear infinite; }}
     .moon {{ animation: moon {CYCLE}s linear infinite; }}
     .c-moonpath {{ animation: moonpath {CYCLE}s linear infinite; }}
@@ -465,6 +489,7 @@ def build():
   <g clip-path="url(#panel)">
     <rect width="{W}" height="{H}" fill="url(#sky)"/>
     <g class="c-stars" fill="#c9d6ea">{stars}</g>
+    {shoot_svg}
     <g class="moon">
       <circle r="62" fill="url(#glow)"/>
       <circle r="25" fill="#dbe9ff" fill-opacity=".14" stroke="{FOAM}" stroke-width="1.5"/>
@@ -543,148 +568,210 @@ def build():
 
 
 # --- footer ----------------------------------------------------------------
+#
+# After the ride: a beach under the same turning sky. She sits on the sand with
+# her board planted behind her and watches the waves come in. Across the bay is
+# a stepped headland with waterfalls dropping into the sea.
 
 FOOTER_OUT = ASSETS / "footer.svg"
-FOOTER_H = 112
-FOOTER_SEA = 46                      # where the footer's sea meets its sky
-FOOTER_SURFER = 58                   # her drawn height down here
-F_WAVE_Y, F_WAVE_AMP, F_WAVE_PERIOD, F_WAVE_SECS = 90, 6, 211.5, 3.0
-F_CROSS_SECS = 30                    # how long she takes to cross the strip
+SITTING_GIF = ASSETS / "Chibi Furina Gentle Hair Breeze Animation.gif"
+BOARD_PNG = ASSETS / "Navy Board with Golden Rim.png"
+
+FOOTER_H = 190
+F_HORIZON = 92                       # where the footer's sea meets its sky
+SIT_X, SIT_Y, SIT_HEIGHT = 262, 163, 74     # where she sits and how tall she is drawn
+BOARD_X, BOARD_Y, BOARD_HEIGHT, BOARD_LEAN = 186, 168, 80, -9
+
+DAYLIGHT.update({
+    "sand": {"fill": ("#262f4c", "#ecdcae", "#b08d7c")},
+    "wet": {"fill": ("#1a2340", "#cbb98a", "#8a7066")},
+    "cliff": {"fill": ("#0f1b34", "#b3c0c8", "#6c6682")},
+    "grass": {"stroke": ("#16304a", "#7fb08a", "#5a6478")},
+})
 
 
-def shrink_strip(b64, cw, ch, cells, target_h):
-    """Scales the sprite strip down so a small surfer does not cost a big file."""
-    f = target_h / ch
-    new_cw, new_ch = max(1, round(cw * f)), max(1, round(ch * f))
-    strip = Image.open(io.BytesIO(base64.b64decode(b64))).convert("RGBA")
-    strip = strip.resize((new_cw * cells, new_ch), Image.Resampling.LANCZOS)
+def small_png(image, height):
+    """A base64 PNG of the image scaled to the given height."""
+    w = max(1, round(image.width * height / image.height))
+    image = image.convert("RGBA").resize((w, height), Image.Resampling.LANCZOS)
     buf = io.BytesIO()
-    strip.quantize(255, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(
+    image.quantize(255, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(
         buf, "PNG", optimize=True)
-    return base64.b64encode(buf.getvalue()).decode(), new_cw, new_ch, new_cw / cw
+    return base64.b64encode(buf.getvalue()).decode(), w, height
+
+
+def footer_sky_xy(u):
+    """The sun and moon's lower arc over the footer, in step with the header's."""
+    return W - 56 - (W - 112) * u, F_HORIZON + 72 - 142 * math.sin(math.pi * u)   # ends well below the horizon, so no glow leaks at night
 
 
 def build_footer():
-    """Builds assets/footer.svg: a slim strip of the same sea to close the page.
-
-    She crosses it from left to right on smaller waves, under the same turning
-    sky as the header.
-    """
-    b64, cw, ch, ax, ay, timeline, standing = load_sprites([(SURF, 1, 1.35, True)])
+    """Builds assets/footer.svg: the beach that closes the page."""
+    b64, cw, ch, ax, ay, timeline, standing = load_sprites([(SITTING_GIF, 1, 1.0, False)])
     cells = max(i for i, _, _ in timeline) + 1
-    b64, cw, ch, f = shrink_strip(b64, cw, ch, cells, FOOTER_SURFER * 2.5)
-    ax, ay, standing = ax * f, ay * f, standing * f
+    strip = Image.open(io.BytesIO(base64.b64decode(b64)))
+    b64, new_w, new_ch = small_png(strip, round(ch * SIT_HEIGHT * 2.5 / standing))
+    new_cw = new_w // cells
+    ax, ay, standing = ax * new_cw / cw, ay * new_ch / ch, standing * new_ch / ch
+    cw, ch = new_cw, new_ch
+    k = SIT_HEIGHT / standing
     frames_css, frames_secs = frame_keyframes(timeline, cw)
-    k = FOOTER_SURFER / standing
-    sink = 5
-    rng = random.Random(11)
 
-    # She moves right, slower than the waves, so they overtake her from behind.
-    # Her path is a whole number of waves long, so the bobbing never jumps.
-    travel = 5 * F_WAVE_PERIOD
-    start_x = -(travel - W) / 2
-    speed = travel / F_CROSS_SECS
-    wave_speed = F_WAVE_PERIOD / F_WAVE_SECS
-    bob = F_WAVE_PERIOD / (wave_speed - speed)
-    delay = -9.0
-    phase = ((start_x - speed * delay) / F_WAVE_PERIOD) % 1
-    ride_style = f"animation-duration:{bob:.3f}s;animation-delay:{phase * bob - bob:.3f}s"
-    cross_style = f"animation-delay:{delay}s"
+    board = Image.open(BOARD_PNG)
+    board = board.crop(board.getbbox())
+    board_b64, bw, bh = small_png(board, BOARD_HEIGHT * 3)
+    board_w = BOARD_HEIGHT * bw / bh
 
-    # The strip of hills repeats, so both ends sit at the same height.
-    pts, x = [(0, FOOTER_SEA), (0, FOOTER_SEA - 8)], 0
-    while x < W - 80:
-        x += rng.randint(40, 90)
-        pts.append((x, FOOTER_SEA - rng.randint(5, 17)))
-    pts += [(W, FOOTER_SEA - 8), (W, FOOTER_SEA)]
-    hills_d = "M" + "L".join(f"{px} {py}" for px, py in pts) + "Z"
+    rng = random.Random(23)
     stars = "".join(
-        f'<circle class="star" cx="{rng.randint(10, W - 10)}" cy="{rng.randint(5, FOOTER_SEA - 20)}" r="{rng.choice((0.8, 1, 1.2))}"/>'
-        for _ in range(18))
-    crest = F_WAVE_Y - F_WAVE_AMP
+        f'<circle class="star" cx="{rng.randint(10, W - 10)}" cy="{rng.randint(5, F_HORIZON - 26)}" r="{rng.choice((0.8, 1, 1.2, 1.4))}"/>'
+        for _ in range(26))
 
-    def surfer(inner):
-        return (f'<g transform="translate(0 {F_WAVE_Y})"><g class="cross" style="{cross_style}">'
-                f'<g class="ride" style="{ride_style}">{inner}</g></g></g>')
-
-    sprite = (f'<svg x="{-ax * k:.2f}" y="{-ay * k + sink:.2f}" width="{cw * k:.2f}" height="{ch * k:.2f}" '
-              f'viewBox="0 0 {cw} {ch}"><use class="strip" href="#sheet"/></svg>')
+    # The shoreline curves away from us: far at the top left, near at the bottom right.
+    shore = "M-10 118C120 115 240 121 330 131C430 142 520 157 600 171C660 181 720 190 760 198"
+    headland = "M0 92V38H60Q70 39 76 50L86 66Q122 61 152 70Q192 79 226 92Z"
+    falls = ((32, 38, 10),)                                   # x, top, width: one fall off the high cliff
+    falls_svg = "".join(
+        f'<rect x="{x - w / 2:g}" y="{top}" width="{w}" height="{F_HORIZON - top}" fill="#eaf4ff" fill-opacity=".8"/>'
+        f'<path class="falls" d="M{x} {top}V{F_HORIZON}" stroke="{ACCENT}" stroke-width="{w * 0.45:g}" stroke-dasharray="4 5" stroke-linecap="butt"/>'
+        for x, top, w in falls)
+    footprints = "".join(
+        f'<ellipse cx="{x}" cy="{y}" rx="3.2" ry="1.5" transform="rotate(-12 {x} {y})"/>'
+        for x, y in ((470, 165), (444, 168), (414, 165), (386, 168), (356, 166), (326, 169), (300, 167)))
+    pebbles = "".join(
+        f'<circle cx="{rng.randint(20, 560)}" cy="{rng.randint(150, 186)}" r="{rng.choice((1, 1.3, 1.6))}"/>'
+        for _ in range(16))
+    shoot_svg, shoot_css, shoot_grad = shooting_stars(((620, 16, 53, 9, -130, 44),))
+    moon_css = sky_keyframes("moon", xy=footer_sky_xy)
+    sun_css = sky_keyframes("sun", xy=footer_sky_xy)
 
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {FOOTER_H}" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <defs>
+    {shoot_grad}
     <clipPath id="panel"><rect width="{W}" height="{FOOTER_H}" rx="11"/></clipPath>
-    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="{FOOTER_SEA}" gradientUnits="userSpaceOnUse">
+    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="{F_HORIZON}" gradientUnits="userSpaceOnUse">
       <stop class="c-sky-top" offset="0" stop-color="{SKY_TOP}"/><stop class="c-sky-low" offset="1" stop-color="{SKY_LOW}"/>
     </linearGradient>
-    <linearGradient id="sea" x1="0" x2="0" y1="{FOOTER_SEA}" y2="{FOOTER_H}" gradientUnits="userSpaceOnUse">
-      <stop class="c-sea-top" offset="0" stop-color="{SEA_TOP}"/><stop class="c-sea-low" offset="1" stop-color="{SEA_LOW}"/>
+    <linearGradient id="sea" x1="0" x2="0" y1="{F_HORIZON}" y2="{FOOTER_H}" gradientUnits="userSpaceOnUse">
+      <stop class="c-sea-top" offset="0" stop-color="{SEA_TOP}"/><stop class="c-face-b" offset="1" stop-color="#163a67"/>
     </linearGradient>
-    <linearGradient id="face" x1="0" x2="0" y1="{crest}" y2="{FOOTER_H}" gradientUnits="userSpaceOnUse">
-      <stop class="c-face-a" offset="0" stop-color="#2c629c"/><stop class="c-face-b" offset=".45" stop-color="#163a67"/><stop class="c-face-c" offset="1" stop-color="#0a1a33"/>
-    </linearGradient>
-    <linearGradient id="dusk" x1="0" x2="0" y1="{FOOTER_SEA - 34}" y2="{FOOTER_SEA}" gradientUnits="userSpaceOnUse">
+    <linearGradient id="dusk" x1="0" x2="0" y1="{F_HORIZON - 46}" y2="{F_HORIZON}" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#ff9a5a" stop-opacity="0"/><stop offset="1" stop-color="#ff9a5a" stop-opacity=".6"/>
     </linearGradient>
-    <clipPath id="below"><rect x="-80" y="1" width="160" height="80"/></clipPath>
+    <linearGradient id="dune" x1="0" x2="0" y1="118" y2="{FOOTER_H}" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/>
+    </linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#cfe3ff" stop-opacity=".32"/><stop offset="1" stop-color="#cfe3ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="sunglow"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".7"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>
+    <radialGradient id="lantern"><stop offset="0" stop-color="{WARM}" stop-opacity=".55"/><stop offset="1" stop-color="{WARM}" stop-opacity="0"/></radialGradient>
+    <clipPath id="on-sand"><path d="{shore}V{FOOTER_H + 20}H-10Z"/></clipPath>
     <image id="sheet" width="{cw * cells}" height="{ch}" href="data:image/png;base64,{b64}"/>
   </defs>
   <style>
     {daylight_css()}
+    {shoot_css}
     .star {{ animation: twinkle 5s ease-in-out infinite alternate; }}
     .star:nth-child(2n) {{ animation-delay: -2s; }}
     .star:nth-child(3n) {{ animation-delay: -3.5s; }}
-    .hills {{ animation: scroll 150s linear infinite; }}
+    .sun {{ animation: sun {CYCLE}s linear infinite; }}
+    .moon {{ animation: moon {CYCLE}s linear infinite; }}
+    .falls {{ animation: fall .9s linear infinite; }}
     .pass {{ animation: pass linear infinite; }}
     .rock {{ animation: rock 3.4s ease-in-out infinite alternate; }}
     .shimmer {{ animation: shimmer 1.8s ease-in-out infinite alternate; }}
-    .ripple {{ animation: drift 8s linear infinite; }}
-    .wave {{ animation: wave {F_WAVE_SECS}s linear infinite; }}
-    .cross {{ animation: cross {F_CROSS_SECS}s linear infinite; }}
-    .ride {{ animation: ride linear infinite; }}
+    .roll {{ animation: roll 7s linear infinite; }}
+    .roll.b {{ animation-duration: 5.5s; }}
+    .roll.c {{ animation-duration: 4.2s; }}
+    .swash {{ animation: swash 4.6s ease-in-out infinite alternate; }}
+    .flicker {{ animation: flicker 1.3s ease-in-out infinite alternate; }}
     .strip {{ animation: frames {frames_secs:.3f}s step-end infinite; }}
-    .spray {{ animation: spray .6s linear infinite; }}
-    .spray.b {{ animation-delay: -.3s; }}
     @keyframes twinkle {{ from {{ opacity: 1; }} to {{ opacity: .3; }} }}
-    @keyframes scroll {{ to {{ transform: translateX(-{W}px); }} }}
+    @keyframes sun {{ {sun_css} }}
+    @keyframes moon {{ {moon_css} }}
+    @keyframes fall {{ to {{ stroke-dashoffset: -9; }} }}
     @keyframes pass {{ from {{ transform: translateX({W + 150}px); }} to {{ transform: translateX(-150px); }} }}
     @keyframes rock {{ from {{ transform: rotate(-.8deg); }} to {{ transform: rotate(.8deg); }} }}
     @keyframes shimmer {{ from {{ opacity: 1; transform: translateX(-2px); }} to {{ opacity: .35; transform: translateX(2px); }} }}
-    @keyframes drift {{ to {{ stroke-dashoffset: -240; }} }}
-    @keyframes wave {{ from {{ transform: translateX(-{F_WAVE_PERIOD}px); }} to {{ transform: translateX(0); }} }}
-    @keyframes cross {{ from {{ transform: translateX({start_x}px); }} to {{ transform: translateX({start_x + travel}px); }} }}
-    @keyframes ride {{ {ride_keyframes(F_WAVE_AMP, F_WAVE_PERIOD)} }}
+    @keyframes roll {{ from {{ transform: translateX(0); }} to {{ transform: translateX(-141px); }} }}
+    @keyframes swash {{ from {{ transform: translate(3px, -7px); }} to {{ transform: translate(-4px, 9px); }} }}
+    @keyframes flicker {{ from {{ opacity: 1; }} to {{ opacity: .7; }} }}
     @keyframes frames {{ {frames_css} }}
-    @keyframes spray {{ from {{ transform: translate(0, 0); opacity: .95; }} to {{ transform: translate(-22px, -4px); opacity: 0; }} }}
     @media (prefers-reduced-motion: reduce) {{ * {{ animation: none !important; }} }}
   </style>
 
   <g clip-path="url(#panel)">
     <rect width="{W}" height="{FOOTER_H}" fill="url(#sky)"/>
     <g class="c-stars" fill="#c9d6ea">{stars}</g>
-    <rect class="c-dusk" y="{FOOTER_SEA - 34}" width="{W}" height="34" fill="url(#dusk)"/>
-    <g class="hills" fill="{LAND}" stroke="{LINE}" stroke-opacity=".4" stroke-width="1">
-      <path class="c-hill" d="{hills_d}"/><path class="c-hill" d="{hills_d}" transform="translate({W})"/>
+    {shoot_svg}
+    <g class="moon">
+      <circle r="44" fill="url(#glow)"/>
+      <circle r="17" fill="#dbe9ff" fill-opacity=".14" stroke="{FOAM}" stroke-width="1.4"/>
+      <path d="M-8 -10a13 13 0 0 0 2 19" stroke="{FOAM}" stroke-opacity=".5" stroke-width="1.2"/>
     </g>
-    <rect y="{FOOTER_SEA}" width="{W}" height="{FOOTER_H - FOOTER_SEA}" fill="url(#sea)"/>
+    <g class="sun">
+      <circle r="56" fill="url(#sunglow)"/>
+      <circle r="16" fill="#ffe08a" stroke="#fff3c4" stroke-width="1.3"/>
+    </g>
+    <rect class="c-dusk" y="{F_HORIZON - 46}" width="{W}" height="46" fill="url(#dusk)"/>
 
-    <g stroke="{LINE}" stroke-width="1.1" stroke-opacity=".4">
-      <path class="ripple" d="M0 {FOOTER_SEA + 8}H{W}" stroke-dasharray="40 200"/>
-      <path class="ripple" style="animation-delay:-3s" d="M0 {FOOTER_SEA + 19}H{W}" stroke-dasharray="64 176"/>
+    <!-- the sea, and the headland across the bay -->
+    <rect y="{F_HORIZON}" width="{W}" height="{FOOTER_H - F_HORIZON}" fill="url(#sea)"/>
+    <g class="c-cliff" fill="#0f1b34" stroke="{LINE}" stroke-opacity=".45" stroke-width="1">
+      <path d="M612 92q4 -15 12 -15q9 0 12 15z"/>
+      <path d="M676 92l5 -22h14l6 22z"/>
+      <path d="{headland}"/>
+    </g>
+    <path class="c-grass" d="M0 38H60M86 66Q122 61 152 70M681 70h14" fill="none" stroke="#16304a" stroke-width="3.2" stroke-linecap="butt"/>
+    <path class="c-town" d="M6 38V22l3 -6l3 6V38M42 38V29a7 7 0 0 1 14 0V38" fill="{LAND}" stroke="{LINE}" stroke-width=".9"/>
+    <g class="c-lamp" fill="{WARM}"><rect x="8.200" y="26" width="1.6" height="2.2"/><rect x="47" y="31" width="1.6" height="2.2"/><rect x="51" y="31" width="1.6" height="2.2"/></g>
+    {falls_svg}
+    <path d="M0 {F_HORIZON}H{W}" stroke="{FOAM}" stroke-opacity=".25" stroke-width="1"/>
+
+    {ship(cruise_ship(), F_HORIZON + 7, 0.42, 150, -66)}
+
+    <!-- waves coming in toward the beach -->
+    <path class="roll" d="{wave_path(104, 1.4, 141, 0)}" stroke="{FOAM}" stroke-opacity=".3" stroke-width="1.1"/>
+    <path class="roll b" d="{wave_path(121, 2.4, 141, 40)}" stroke="{FOAM}" stroke-opacity=".45" stroke-width="1.3"/>
+    <path class="roll c" d="{wave_path(142, 3.4, 141, 90)}" stroke="{FOAM}" stroke-opacity=".6" stroke-width="1.5"/>
+    <path class="roll c" style="animation-delay:-2s" d="{wave_path(166, 4, 141, 20)}" stroke="{FOAM}" stroke-opacity=".7" stroke-width="1.7"/>
+
+    <!-- the beach -->
+    <path class="c-sand" d="{shore}V{FOOTER_H + 20}H-10Z" fill="#262f4c"/>
+    <path d="{shore}V{FOOTER_H + 20}H-10Z" fill="url(#dune)"/>
+    <g clip-path="url(#on-sand)">
+      <path class="c-wet" d="{shore}" stroke="none" fill="none"/>
+      <path class="c-wet" d="{shore}l0 16C690 196 610 186 560 178C480 165 400 152 330 146C240 138 120 132 -10 134Z" fill="#1a2340"/>
+      <g class="swash">
+        <path d="{shore}" stroke="#5aa9e6" stroke-opacity=".38" stroke-width="16"/>
+        <path d="{shore}" transform="translate(0 8)" stroke="#fff" stroke-opacity=".85" stroke-width="2.2"/>
+      </g>
+      <g fill="#000" fill-opacity=".2">{footprints}{pebbles}</g>
     </g>
 
-    {ship(container_ship(), FOOTER_SEA + 14, 0.42, 130, -52)}
+    <!-- her board, planted in the sand -->
+    <ellipse cx="{BOARD_X + 10}" cy="{BOARD_Y + 1}" rx="17" ry="3" fill="#000" fill-opacity=".28"/>
+    <g transform="translate({BOARD_X} {BOARD_Y}) rotate({BOARD_LEAN})">
+      <svg x="{-board_w / 2:.2f}" y="{-BOARD_HEIGHT * 0.9:.2f}" width="{board_w:.2f}" height="{BOARD_HEIGHT * 0.9:.2f}" viewBox="0 0 {bw} {bh * 0.9:.1f}">
+        <image width="{bw}" height="{bh}" href="data:image/png;base64,{board_b64}"/>
+      </svg>
+    </g>
+    <path class="c-sand" d="M{BOARD_X - 13} {BOARD_Y + 1}q13 -6 27 0q-13 4 -27 0z" fill="#262f4c"/>
 
-    {surfer(sprite)}
-    <path class="wave" d="{wave_path(F_WAVE_Y, F_WAVE_AMP, F_WAVE_PERIOD, 0, close_to=FOOTER_H + 10)}" fill="url(#face)"/>
-    {surfer(f'<g clip-path="url(#below)" opacity=".3"><g transform="scale(1 -.75)">{sprite}</g></g>')}
-    <path class="wave" d="{wave_path(F_WAVE_Y, F_WAVE_AMP, F_WAVE_PERIOD, 0, drop=9)}" stroke="{FOAM}" stroke-opacity=".22" stroke-width="1.2"/>
-    <path class="wave" d="{wave_path(F_WAVE_Y, F_WAVE_AMP, F_WAVE_PERIOD, 0)}" stroke="{FOAM}" stroke-width="1.8"/>
-    {surfer('<g stroke="#fff" stroke-width="1.4"><path class="spray" d="M-14 -1h-8"/><path class="spray b" d="M-16 -5h-6"/></g>')}
+    <!-- a lantern beside her, lit at night -->
+    <g class="c-glow"><circle class="flicker" cx="{SIT_X + 40}" cy="{SIT_Y - 4}" r="26" fill="url(#lantern)"/></g>
+    <path d="M{SIT_X + 36} {SIT_Y}v-9h8v9zM{SIT_X + 37} {SIT_Y - 9}q3 -5 6 0" fill="#1b2d49" stroke="{LINE}" stroke-width=".9"/>
+    <g class="c-lamp" fill="{WARM}"><rect x="{SIT_X + 38}" y="{SIT_Y - 7}" width="4" height="5"/></g>
+
+    <!-- Furina -->
+    <ellipse cx="{SIT_X - 2}" cy="{SIT_Y + 1}" rx="27" ry="4" fill="#000" fill-opacity=".28"/>
+    <svg x="{SIT_X - ax * k:.2f}" y="{SIT_Y - ay * k + 2:.2f}" width="{cw * k:.2f}" height="{ch * k:.2f}" viewBox="0 0 {cw} {ch}">
+      <use class="strip" href="#sheet"/>
+    </svg>
   </g>
 </svg>
 """
     FOOTER_OUT.write_text(svg, encoding="utf-8", newline="\n")
-    print(f"wrote {FOOTER_OUT.relative_to(ROOT)}  {FOOTER_OUT.stat().st_size / 1024:.0f} KB")
+    print(f"wrote {FOOTER_OUT.relative_to(ROOT)}  {FOOTER_OUT.stat().st_size / 1024:.0f} KB  ({cells} frames, {cw}x{ch})")
 
 
 if __name__ == "__main__":
