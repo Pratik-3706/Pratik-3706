@@ -6,6 +6,8 @@ The surfer is read from GIF loops, packed into one sprite strip and embedded in
 the SVG, so the header is a single self-contained file that GitHub can show in
 a README. Everything that moves is plain CSS inside the SVG.
 
+The sky turns from night to day and back, starting at night.
+
 The waves roll to the right, the way she is heading, and she rises and tilts
 with each one. The coast and the ships slide past to the left.
 """
@@ -47,6 +49,30 @@ LINE = "#8b9bb4"
 ACCENT = "#5aa9e6"
 FOAM = "#b5d9ff"
 WARM = "#f2c14e"
+
+# Day and night. One full turn of the sky takes CYCLE seconds and starts at
+# night. Each entry is a part of the scene and what changes about it:
+#   property: (at night, by day, at dawn and dusk)   -- the last one is optional
+CYCLE = 48
+DAYLIGHT = {
+    "sky-top": {"stop-color": ("#070d1a", "#4d9be0", "#3a3565")},
+    "sky-low": {"stop-color": ("#14294a", "#c4e6fb", "#f2a66e")},
+    "sea-top": {"stop-color": ("#10233f", "#63b2e6", "#8a6f8c")},
+    "sea-low": {"stop-color": ("#081326", "#2c78bd", "#26335e")},
+    "face-a": {"stop-color": ("#2c629c", "#8ad0f5", None)},
+    "face-b": {"stop-color": ("#163a67", "#3f96d8", None)},
+    "face-c": {"stop-color": ("#0a1a33", "#1f62a6", None)},
+    "stars": {"opacity": (1, 0, .25)},
+    "hill": {"fill": ("#0c1830", "#7fa596", "#4a4f72")},
+    "town": {"fill": ("#0c1830", "#ece6d8", "#6b5f78"), "stroke": ("#8b9bb4", "#5a6a82", "#8b8ba4")},
+    "quay": {"fill": ("#1a2a45", "#bdb6a6", "#6d6478")},
+    "rocks": {"fill": ("#0c1830", "#808a96", "#4a4a66")},
+    "lamp": {"opacity": (1, .1, .8)},     # windows and lamps go dark by day
+    "glow": {"opacity": (1, 0, .6)},      # and their reflections go with them
+    "hull": {"fill": ("#0d1a2e", "#27405f", None)},
+    "deck": {"fill": ("#1b2d49", "#f3f6fa", None)},
+    "dusk": {"opacity": (0, 0, .75)},     # the warm band on the horizon
+}
 
 # The waves she rides: a rolling swell that travels right, under her board.
 SURFER_X = 200
@@ -131,6 +157,53 @@ def splash_keyframes(timeline, burst=0.6):
         now += secs
     out.append(f"100% {{ {hidden} }}")
     return " ".join(out)
+
+
+SUNRISE, SUNSET = 36, 89          # percent of the cycle; the moon has the rest
+
+
+def sky_xy(u):
+    """Where the sun or moon is, u=0 rising on the right to u=1 setting on the left."""
+    return W - 56 - (W - 112) * u, 150 - 115 * math.sin(math.pi * u)
+
+
+def sky_keyframes(body, steps=12):
+    """CSS keyframes that carry the sun or the moon over the sky in a low arc.
+
+    Both wait below the horizon, hidden behind the sea, while the other is up.
+    """
+    def at(pct, u):
+        x, y = sky_xy(u)
+        return f"{pct:.2f}% {{ transform: translate({x:.1f}px, {y:.1f}px); }}"
+
+    day, night = SUNSET - SUNRISE, 100 - (SUNSET - SUNRISE)
+    if body == "sun":
+        frames = [at(0, 0)] + [at(SUNRISE + day * i / steps, i / steps) for i in range(steps + 1)] + [at(100, 1)]
+    else:
+        start = (100 - SUNSET) / night            # the moon is already up when the cycle begins
+        up = [at(SUNRISE * i / steps, start + (1 - start) * i / steps) for i in range(steps + 1)]
+        down = [at(SUNSET + (100 - SUNSET) * i / 4, start * i / 4) for i in range(5)]
+        frames = up + down
+    return " ".join(frames)
+
+
+def daylight_css():
+    """CSS that carries every part of the scene from night to day and back."""
+    out = []
+    for name, props in DAYLIGHT.items():
+        def at(i):
+            return " ".join(f"{prop}: {v[i]};" for prop, v in props.items())
+        twilight = all(v[2] is not None for v in props.values())
+        steps = [f"0%, 32% {{ {at(0)} }}"]
+        if twilight:
+            steps.append(f"38% {{ {at(2)} }}")
+        steps.append(f"44%, 81% {{ {at(1)} }}")
+        if twilight:
+            steps.append(f"87% {{ {at(2)} }}")
+        steps.append(f"93%, 100% {{ {at(0)} }}")
+        out.append(f".c-{name} {{ animation: c-{name} {CYCLE}s linear infinite; }} "
+                   f"@keyframes c-{name} {{ {' '.join(steps)} }}")
+    return "\n    ".join(out)
 
 
 # --- water -----------------------------------------------------------------
@@ -221,9 +294,9 @@ def skyline(rng):
     lighthouse = (
         f'<path d="M{lx - 5} {base}L{lx - 3} {base - 34}H{lx + 3}L{lx + 5} {base}Z'
         f'M{lx - 4} {base - 34}V{base - 40}H{lx + 4}V{base - 34}M{lx - 5} {base - 40}L{lx} {base - 45}L{lx + 5} {base - 40}" '
-        f'fill="{LAND}" stroke="{LINE}" stroke-opacity=".8" stroke-width="1"/>'
-        f'<g class="blink" fill="{WARM}"><circle cx="{lx}" cy="{base - 37}" r="2"/>'
-        f'<circle cx="{lx}" cy="{base - 37}" r="8" opacity=".25"/></g>')
+        f'class="c-town" fill="{LAND}" stroke="{LINE}" stroke-opacity=".8" stroke-width="1"/>'
+        f'<g class="c-lamp"><g class="blink" fill="{WARM}"><circle cx="{lx}" cy="{base - 37}" r="2"/>'
+        f'<circle cx="{lx}" cy="{base - 37}" r="8" opacity=".25"/></g></g>')
     # Every light on shore throws a broken streak down the water toward us.
     glints += [(gx, 1.0) for gx in range(14, W, 47)]
     rows = ((4, 7, .6), (9, 6, .48), (15, 5, .36), (22, 4, .26), (30, 3, .17))
@@ -238,13 +311,13 @@ def skyline(rng):
     reflection += f'<path class="blink" d="{beam}" stroke="{WARM}" stroke-opacity=".7" stroke-width="1.6"/>'
 
     return (
-        f'<path d="{"".join(d)}" fill="{LAND}" stroke="{LINE}" stroke-opacity=".75" stroke-width="1"/>'
-        f'<g fill="{WARM}">{"".join(lights)}</g>{lighthouse}'
-        f'<rect y="{base}" width="{W}" height="{WATER - base}" fill="{QUAY}"/>'
+        f'<path class="c-town" d="{"".join(d)}" fill="{LAND}" stroke="{LINE}" stroke-opacity=".75" stroke-width="1"/>'
+        f'<g class="c-lamp" fill="{WARM}">{"".join(lights)}</g>{lighthouse}'
+        f'<rect class="c-quay" y="{base}" width="{W}" height="{WATER - base}" fill="{QUAY}"/>'
         f'<path d="{buttresses}" stroke="{LINE}" stroke-opacity=".3" stroke-width="1"/>'
         f'<path d="M0 {base}H{W}" stroke="{LINE}" stroke-opacity=".9" stroke-width="1.2"/>'
-        f'<path d="{"".join(rocks)}" fill="{LAND}" stroke="{LINE}" stroke-opacity=".45" stroke-width="1"/>'
-        f'<g fill="{WARM}">{lamps}</g>'), reflection
+        f'<path class="c-rocks" d="{"".join(rocks)}" fill="{LAND}" stroke="{LINE}" stroke-opacity=".45" stroke-width="1"/>'
+        f'<g class="c-lamp" fill="{WARM}">{lamps}</g>'), reflection
 
 
 def cruise_ship():
@@ -255,12 +328,12 @@ def cruise_ship():
         f'<rect x="{x}" y="{yt + 2.2}" width="2.6" height="2.2"/>'
         for x0, x1, yb, yt in decks for x in range(x0 + 5, x1 - 9, 6))
     ports = "".join(f'<circle cx="{x}" cy="-8" r="1.1"/>' for x in range(-66, 62, 8))
-    return f"""<path d="M-78 -15L-74 -2Q-73 0 -68 0H60Q69 -4 80 -17Z" fill="{HULL}" stroke="{LINE}" stroke-width="1.1"/>
+    return f"""<path d="M-78 -15L-74 -2Q-73 0 -68 0H60Q69 -4 80 -17Z" class="c-hull" fill="{HULL}" stroke="{LINE}" stroke-width="1.1"/>
         <path d="M-76 -6H66" stroke="{ACCENT}" stroke-opacity=".6" stroke-width="1"/>
-        <path d="{deck_d}M-38 -43L-36 -57H-24L-21 -43Z" fill="{DECK}" stroke="{LINE}" stroke-width="1"/>
+        <path d="{deck_d}M-38 -43L-36 -57H-24L-21 -43Z" class="c-deck" fill="{DECK}" stroke="{LINE}" stroke-width="1"/>
         <path d="M-36.500 -52H-23M12 -43V-56M7 -51H17" stroke="{ACCENT}" stroke-width="1.2"/>
         <circle cx="12" cy="-57.500" r="1.4" fill="{ACCENT}"/>
-        <g fill="{WARM}">{windows}{ports}</g>"""
+        <g class="c-lamp" fill="{WARM}">{windows}{ports}</g>"""
 
 
 def container_ship():
@@ -273,12 +346,12 @@ def container_ship():
             boxes.append(f'<rect x="{x}" y="{-16 - row * 5}" width="11" height="4.6" fill="{shade}"/>')
     bridge = "".join(f'<rect x="{x}" y="-38" width="2.4" height="2.2"/>' for x in range(-62, -48, 4))
     deck_lights = "".join(f'<circle cx="{x}" cy="-6" r="1"/>' for x in range(-60, 70, 22))
-    return f"""<path d="M-78 -11L-75 -2Q-74 0 -69 0H62Q70 -3 79 -12Z" fill="{HULL}" stroke="{LINE}" stroke-width="1.1"/>
-        <path d="M-73 -11V-28H-67V-11M-64 -11V-41H-46V-11M-58 -41V-47H-52V-41" fill="{DECK}" stroke="{LINE}" stroke-width="1"/>
+    return f"""<path d="M-78 -11L-75 -2Q-74 0 -69 0H62Q70 -3 79 -12Z" class="c-hull" fill="{HULL}" stroke="{LINE}" stroke-width="1.1"/>
+        <path d="M-73 -11V-28H-67V-11M-64 -11V-41H-46V-11M-58 -41V-47H-52V-41" class="c-deck" fill="{DECK}" stroke="{LINE}" stroke-width="1"/>
         <path d="M-67 -41H-43M68 -12V-25M-55 -47V-53" stroke="{LINE}" stroke-width="1"/>
         <g stroke="{LINE}" stroke-opacity=".6" stroke-width=".7">{''.join(boxes)}</g>
         <circle cx="68" cy="-26" r="1.3" fill="{ACCENT}"/>
-        <g fill="{WARM}">{bridge}{deck_lights}</g>"""
+        <g class="c-lamp" fill="{WARM}">{bridge}{deck_lights}</g>"""
 
 
 def ship(body, waterline, scale, secs, delay):
@@ -289,7 +362,7 @@ def ship(body, waterline, scale, secs, delay):
     return f"""<g transform="translate(0 {waterline})"><g class="pass" style="animation-duration:{secs}s;animation-delay:{delay}s"><g transform="scale({scale})">
         <ellipse cx="0" cy="2" rx="84" ry="3.5" fill="#040a14" opacity=".6"/>
         <g transform="scale(1 -.55)" opacity=".22">{body}</g>
-        <g stroke="{WARM}" stroke-width="1.2" opacity=".45">{streaks}</g>
+        <g class="c-glow"><g stroke="{WARM}" stroke-width="1.2" opacity=".45">{streaks}</g></g>
         <g class="rock">{body}</g>
       </g></g></g>"""
 
@@ -310,7 +383,7 @@ def build():
     stars = "".join(
         f'<circle class="star" cx="{rng.randint(10, W - 10)}" cy="{rng.randint(8, CITY_BASE - 44)}" r="{rng.choice((0.8, 1, 1.2, 1.5))}"/>'
         for _ in range(26))
-    moon_x = 700
+    moon_x = round(sky_xy((100 - SUNSET) / (100 - (SUNSET - SUNRISE)))[0])   # under the moon at the start
     moon_path = "".join(
         f'<path class="shimmer" style="animation-delay:{-i * 0.5}s" d="M{moon_x - w / 2:g} {y}h{w}"/>'
         for i, (y, w) in enumerate(((132, 62), (141, 48), (152, 36), (165, 24), (180, 13))))
@@ -321,13 +394,13 @@ def build():
   <defs>
     <clipPath id="panel"><rect width="{W}" height="{H}" rx="12"/></clipPath>
     <linearGradient id="sky" x1="0" x2="0" y1="0" y2="{WATER}" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="{SKY_TOP}"/><stop offset="1" stop-color="{SKY_LOW}"/>
+      <stop class="c-sky-top" offset="0" stop-color="{SKY_TOP}"/><stop class="c-sky-low" offset="1" stop-color="{SKY_LOW}"/>
     </linearGradient>
     <linearGradient id="sea" x1="0" x2="0" y1="{WATER}" y2="{H}" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="{SEA_TOP}"/><stop offset="1" stop-color="{SEA_LOW}"/>
+      <stop class="c-sea-top" offset="0" stop-color="{SEA_TOP}"/><stop class="c-sea-low" offset="1" stop-color="{SEA_LOW}"/>
     </linearGradient>
     <linearGradient id="face" x1="0" x2="0" y1="{crest}" y2="{H}" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#2c629c"/><stop offset=".45" stop-color="#163a67"/><stop offset="1" stop-color="#0a1a33"/>
+      <stop class="c-face-a" offset="0" stop-color="#2c629c"/><stop class="c-face-b" offset=".45" stop-color="#163a67"/><stop class="c-face-c" offset="1" stop-color="#0a1a33"/>
     </linearGradient>
     <linearGradient id="cityglow" x1="0" x2="0" y1="{WATER}" y2="{WATER + 44}" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="{WARM}" stop-opacity=".13"/><stop offset="1" stop-color="{WARM}" stop-opacity="0"/>
@@ -335,12 +408,25 @@ def build():
     <linearGradient id="shade" x1="0" x2="0" y1="{WATER}" y2="{WATER + 10}" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#040a14" stop-opacity=".6"/><stop offset="1" stop-color="#040a14" stop-opacity="0"/>
     </linearGradient>
+    <linearGradient id="dusk" x1="0" x2="0" y1="{WATER - 80}" y2="{WATER}" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff9a5a" stop-opacity="0"/><stop offset="1" stop-color="#ff9a5a" stop-opacity=".6"/>
+    </linearGradient>
+    <radialGradient id="sunglow"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".7"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>
+    <clipPath id="below"><rect x="-160" y="2" width="320" height="170"/></clipPath>
+    <image id="sheet" width="{cw * n_cells}" height="{ch}" href="data:image/png;base64,{b64}"/>
     <radialGradient id="glow"><stop offset="0" stop-color="#cfe3ff" stop-opacity=".32"/><stop offset="1" stop-color="#cfe3ff" stop-opacity="0"/></radialGradient>
   </defs>
   <style>
     .star {{ animation: twinkle 5s ease-in-out infinite alternate; }}
     .star:nth-child(2n) {{ animation-delay: -2s; }}
     .star:nth-child(3n) {{ animation-delay: -3.5s; }}
+    {daylight_css()}
+    .sun {{ animation: sun {CYCLE}s linear infinite; }}
+    .moon {{ animation: moon {CYCLE}s linear infinite; }}
+    .c-moonpath {{ animation: moonpath {CYCLE}s linear infinite; }}
+    @keyframes sun {{ {sky_keyframes("sun")} }}
+    @keyframes moon {{ {sky_keyframes("moon")} }}
+    @keyframes moonpath {{ 0% {{ opacity: 1; }} 7%, 95% {{ opacity: 0; }} 100% {{ opacity: 1; }} }}
     .hills {{ animation: scroll 150s linear infinite; }}
     .city {{ animation: scroll 55s linear infinite; }}
     .blink {{ animation: blink 2.4s steps(1) infinite; }}
@@ -373,22 +459,32 @@ def build():
 
   <g clip-path="url(#panel)">
     <rect width="{W}" height="{H}" fill="url(#sky)"/>
-    <g fill="#c9d6ea">{stars}</g>
-    <circle cx="{moon_x}" cy="52" r="62" fill="url(#glow)"/>
-    <circle cx="{moon_x}" cy="52" r="25" fill="#dbe9ff" fill-opacity=".14" stroke="{FOAM}" stroke-width="1.5"/>
-    <path d="M{moon_x - 12} 37a19 19 0 0 0 3 28" stroke="{FOAM}" stroke-opacity=".5" stroke-width="1.3"/>
+    <g class="c-stars" fill="#c9d6ea">{stars}</g>
+    <g class="moon">
+      <circle r="62" fill="url(#glow)"/>
+      <circle r="25" fill="#dbe9ff" fill-opacity=".14" stroke="{FOAM}" stroke-width="1.5"/>
+      <path d="M-12 -15a19 19 0 0 0 3 28" stroke="{FOAM}" stroke-opacity=".5" stroke-width="1.3"/>
+    </g>
+    <g class="sun">
+      <circle r="78" fill="url(#sunglow)"/>
+      <circle r="22" fill="#ffe08a"/>
+      <circle r="22" stroke="#fff3c4" stroke-width="1.5"/>
+    </g>
+    <rect class="c-dusk" y="{WATER - 80}" width="{W}" height="80" fill="url(#dusk)"/>
 
     <g class="hills" fill="{LAND}" stroke="{LINE}" stroke-opacity=".4" stroke-width="1">
-      <path d="{hills_d}"/><path d="{hills_d}" transform="translate({W})"/>
+      <path class="c-hill" d="{hills_d}"/><path class="c-hill" d="{hills_d}" transform="translate({W})"/>
     </g>
 
     <rect y="{WATER}" width="{W}" height="{H - WATER}" fill="url(#sea)"/>
     {city()}
     <rect y="{WATER}" width="{W}" height="10" fill="url(#shade)"/>
-    <rect y="{WATER}" width="{W}" height="44" fill="url(#cityglow)"/>
-    <g class="city">{city_glints}<g transform="translate({W})">{city_glints}</g></g>
+    <g class="c-glow">
+      <rect y="{WATER}" width="{W}" height="44" fill="url(#cityglow)"/>
+      <g class="city">{city_glints}<g transform="translate({W})">{city_glints}</g></g>
+    </g>
 
-    <g stroke="{FOAM}" stroke-width="1.6" stroke-opacity=".8">{moon_path}</g>
+    <g class="c-moonpath" stroke="{FOAM}" stroke-width="1.6" stroke-opacity=".8">{moon_path}</g>
 
     <g stroke="{LINE}" stroke-width="1.1" stroke-opacity=".4">
       <path class="ripple slow" d="M0 137H{W}" stroke-dasharray="40 200"/>
@@ -403,12 +499,19 @@ def build():
     <g transform="translate({SURFER_X} {WAVE_Y})">
       <g class="ride">
         <svg x="{-ax * k:.2f}" y="{-ay * k + BOARD_SINK:.2f}" width="{cw * k:.2f}" height="{ch * k:.2f}" viewBox="0 0 {cw} {ch}">
-          <image class="strip" width="{cw * n_cells}" height="{ch}" href="data:image/png;base64,{b64}"/>
+          <use class="strip" href="#sheet"/>
         </svg>
       </g>
     </g>
 
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, close_to=H + 10)}" fill="url(#face)"/>
+    <g transform="translate({SURFER_X} {WAVE_Y})">
+      <g class="ride"><g clip-path="url(#below)" opacity=".3"><g transform="scale(1 -.75)">
+        <svg x="{-ax * k:.2f}" y="{-ay * k + BOARD_SINK:.2f}" width="{cw * k:.2f}" height="{ch * k:.2f}" viewBox="0 0 {cw} {ch}">
+          <use class="strip" href="#sheet"/>
+        </svg>
+      </g></g></g>
+    </g>
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, drop=13)}" stroke="{FOAM}" stroke-opacity=".28" stroke-width="1.3"/>
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, drop=28)}" stroke="{FOAM}" stroke-opacity=".14" stroke-width="1.3"/>
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X)}" stroke="{FOAM}" stroke-width="2"/>
