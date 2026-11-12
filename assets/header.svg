@@ -13,26 +13,30 @@
     </linearGradient>
   </defs>
   <style>
-    .shore { animation: slide-shore 90s linear infinite; }
-    .ripple { animation: drift 6.5s linear infinite; }
-    .ripple.slow { animation-duration: 10s; }
-    .mid { animation: slide-mid 4.8s linear infinite; }
-    .front { animation: slide-front 3.4s linear infinite; }
-    .bob { animation: bob 1.7s ease-in-out infinite alternate; }
-    .tilt { animation: tilt 1.7s ease-in-out -0.85s infinite alternate; transform-origin: 190px 204px; }
-    .strip { animation: frames 1.2s steps(9) infinite; image-rendering: pixelated; }
-    .spray { animation: spray .85s linear infinite; }
-    .spray.b { animation-delay: -.3s; }
-    .spray.c { animation-delay: -.58s; }
+    .falls { animation: fall 1.2s linear infinite; }
+    .sail { animation: sail linear infinite; }
+    .rock { animation: rock 2.6s ease-in-out infinite alternate; }
+    .ripple { animation: drift 5s linear infinite; }
+    .ripple.slow { animation-duration: 8s; }
+    .mid { animation: slide-mid 3.8s linear infinite; }
+    .front { animation: slide-front 2.7s linear infinite; }
+    .bob { animation: bob 1.35s ease-in-out infinite alternate; }
+    .tilt { animation: tilt 1.35s ease-in-out -0.675s infinite alternate; transform-origin: 190px 204px; }
+    .strip { animation: frames 1.0666666666666667s steps(9) infinite; image-rendering: pixelated; }
+    .spray { animation: spray .7s linear infinite; }
+    .spray.b { animation-delay: -.25s; }
+    .spray.c { animation-delay: -.48s; }
     .star { animation: twinkle 5s ease-in-out infinite alternate; }
     .star:nth-child(2n) { animation-delay: -2s; }
     .star:nth-child(3n) { animation-delay: -3.5s; }
-    @keyframes slide-shore { to { transform: translateX(-846px); } }
-    @keyframes drift { to { stroke-dashoffset: 240; } }
-    @keyframes slide-mid { to { transform: translateX(-141px); } }
-    @keyframes slide-front { to { transform: translateX(-282px); } }
+    @keyframes fall { to { stroke-dashoffset: -6; } }
+    @keyframes sail { from { transform: translateX(896px); } to { transform: translateX(-50px); } }
+    @keyframes rock { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+    @keyframes drift { to { stroke-dashoffset: -240; } }
+    @keyframes slide-mid { from { transform: translateX(-141px); } to { transform: translateX(0); } }
+    @keyframes slide-front { from { transform: translateX(-282px); } to { transform: translateX(0); } }
     @keyframes bob { from { transform: translateY(-8px); } to { transform: translateY(8px); } }
-    @keyframes tilt { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+    @keyframes tilt { from { transform: rotate(4deg); } to { transform: rotate(-4deg); } }
     @keyframes frames { to { transform: translateX(-2943px); } }
     @keyframes spray { from { transform: translateX(0); opacity: .8; } to { transform: translateX(-70px); opacity: 0; } }
     @keyframes twinkle { from { opacity: 1; } to { opacity: .35; } }
@@ -55,10 +59,9 @@
     <circle cx="650" cy="70" r="29" stroke="#4a9eda" stroke-width="1.6"/>
     <path d="M636 53a21 21 0 0 0 4 32" stroke="#4a9eda" stroke-opacity=".55" stroke-width="1.4"/>
 
-    <g class="shore" stroke="#8b949e" stroke-opacity=".55" stroke-width="1.2">
-      <path d="M40 128L98 110L130 119L176 101L232 124L270 128M520 128L566 116L604 122L640 128"/>
-      <path d="M40 128L98 110L130 119L176 101L232 124L270 128M520 128L566 116L604 122L640 128" transform="translate(846)"/>
-    </g>
+    <path d="M30 128L88 110L120 119L166 101L222 124L260 128M505 128L548 117L588 123L616 128" stroke="#8b949e" stroke-opacity=".55" stroke-width="1.2"/>
+    <path d="M295 128V112H475V128M321 112V101H449V112M349 101V91H421V101M378 91V66M392 91V66M375 66H395M376 66a9 9 0 0 1 18 0M385 57V44M331 101V84L334 76L337 84V101M433 101V84L436 76L439 84V101M303 112V98L306 91L309 98V112M461 112V98L464 91L467 98V112M314 128v-6a5 5 0 0 1 10 0v6M336 128v-6a5 5 0 0 1 10 0v6M358 128v-6a5 5 0 0 1 10 0v6M402 128v-6a5 5 0 0 1 10 0v6M424 128v-6a5 5 0 0 1 10 0v6M446 128v-6a5 5 0 0 1 10 0v6" stroke="#8b949e" stroke-opacity=".8" stroke-width="1.1"/>
+    <path class="falls" d="M330 114V127M385 114V127M440 114V127" stroke="#4a9eda" stroke-opacity=".8" stroke-width="1.4" stroke-dasharray="3 3"/>
     <path d="M0 128H846" stroke="#8b949e" stroke-opacity=".9" stroke-width="1.2"/>
 
     <g stroke="#4a9eda" stroke-width="1.6">
@@ -70,6 +73,11 @@
     <g stroke="#8b949e" stroke-width="1.2" stroke-opacity=".45">
       <path class="ripple slow" d="M0 142H846" stroke-dasharray="46 194"/>
       <path class="ripple" d="M0 157H846" stroke-dasharray="64 176" stroke-dashoffset="90"/>
+    </g>
+
+    <g stroke="#8b949e" stroke-opacity=".8" stroke-width="1.2">
+      <g transform="translate(0 138)"><g class="sail" style="animation-duration:80s;animation-delay:-30s"><g transform="scale(0.5)"><path class="rock" d="M-22 0h44q-3 9-10 9h-22q-8 0-12-9zM0 0v-30M-2-28q-14 10-16 24h16zM2-26l13 22h-13zM0-30l-6 2 6 2"/></g></g></g>
+      <g transform="translate(0 165)"><g class="sail" style="animation-duration:42s;animation-delay:-31s"><g transform="scale(0.95)"><path class="rock" d="M-22 0h44q-3 9-10 9h-22q-8 0-12-9zM0 0v-30M-2-28q-14 10-16 24h16zM2-26l13 22h-13zM0-30l-6 2 6 2"/></g></g></g>
     </g>
 
     <path class="mid" d="M-176.25 178q35.25 -8 70.5 0t70.5 0t70.5 0t70.5 0t70.5 0t70.5 0t70.5 0t70.5 0t70.5 0t70.5 0t70.5 0t70.5 0t70.5 0t70.5 0t70.5 0t70.5 0t70.5 0" stroke="#8b949e" stroke-opacity=".6" stroke-width="1.3"/>

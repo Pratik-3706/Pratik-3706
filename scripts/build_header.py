@@ -18,15 +18,15 @@ OUT = ROOT / "assets" / "header.svg"
 # The loop shown on the wave. Swap the file or add entries here later.
 SURFER_GIF = ROOT / "assets" / "Chibi Furina Surfing Loop.gif"
 SURFER_HEIGHT = 128  # drawn height in header units
-SURFER_SPEED = 1.2   # 1 plays the GIF at its own frame rate
+SURFER_SPEED = 1.35  # 1 plays the GIF at its own frame rate
 
 W, H = 846, 240
 ACCENT = "#4a9eda"
 MUTED = "#8b949e"
 
 SURF_X = 190  # where the board's centre sits
-FRONT_Y, FRONT_AMP, FRONT_PERIOD, FRONT_SECS = 204, 8, 282, 3.4
-MID_Y, MID_AMP, MID_PERIOD, MID_SECS = 178, 4, 141, 4.8
+FRONT_Y, FRONT_AMP, FRONT_PERIOD, FRONT_SECS = 204, 8, 282, 2.7
+MID_Y, MID_AMP, MID_PERIOD, MID_SECS = 178, 4, 141, 3.8
 
 
 def load_strip(path):
@@ -52,7 +52,10 @@ def load_strip(path):
 
 
 def wave_path(y, amp, period, crest_x, close_to=None):
-    """A sine-like line with a crest at crest_x, long enough to scroll one period."""
+    """A sine-like line with a crest at crest_x, long enough to scroll one period.
+
+    The waves travel right, the way the surfer is heading, as a real wave does.
+    """
     start = crest_x - period / 4
     while start > -period:
         start -= period
@@ -66,6 +69,42 @@ def wave_path(y, amp, period, crest_x, close_to=None):
     return d
 
 
+def city(cx, base):
+    """A far-off tiered city on the horizon: stepped terraces, towers, a domed spire."""
+    def tower(x, foot, top, roof):
+        return f"M{x - 3} {foot}V{top}L{x} {roof}L{x + 3} {top}V{foot}"
+
+    d = [
+        f"M{cx - 90} {base}V{base - 16}H{cx + 90}V{base}",            # sea wall
+        f"M{cx - 64} {base - 16}V{base - 27}H{cx + 64}V{base - 16}",  # middle terrace
+        f"M{cx - 36} {base - 27}V{base - 37}H{cx + 36}V{base - 27}",  # upper terrace
+        f"M{cx - 7} {base - 37}V{base - 62}M{cx + 7} {base - 37}V{base - 62}",
+        f"M{cx - 10} {base - 62}H{cx + 10}M{cx - 9} {base - 62}a9 9 0 0 1 18 0",
+        f"M{cx} {base - 71}V{base - 84}",
+        tower(cx - 51, base - 27, base - 44, base - 52),
+        tower(cx + 51, base - 27, base - 44, base - 52),
+        tower(cx - 79, base - 16, base - 30, base - 37),
+        tower(cx + 79, base - 16, base - 30, base - 37),
+    ]
+    for off in (-66, -44, -22, 22, 44, 66):                            # arches in the wall
+        d.append(f"M{cx + off - 5} {base}v-6a5 5 0 0 1 10 0v6")
+    falls = "".join(f"M{cx + off} {base - 14}V{base - 1}" for off in (-55, 0, 55))
+    return "".join(d), falls
+
+
+SHIP = ("M-22 0h44q-3 9-10 9h-22q-8 0-12-9z"   # hull, bow to the right
+        "M0 0v-30"                              # mast
+        "M-2-28q-14 10-16 24h16z"               # mainsail
+        "M2-26l13 22h-13z"                      # jib
+        "M0-30l-6 2 6 2")                       # pennant
+
+
+def ship(y, scale, secs, delay):
+    return (f'<g transform="translate(0 {y})"><g class="sail" style="animation-duration:{secs}s;'
+            f'animation-delay:{delay}s"><g transform="scale({scale})">'
+            f'<path class="rock" d="{SHIP}"/></g></g></g>')
+
+
 def build():
     b64, fw, fh, n, loop_secs = load_strip(SURFER_GIF)
     sw = SURFER_HEIGHT * fw / fh
@@ -73,7 +112,8 @@ def build():
     half = FRONT_SECS / 2
     crest = FRONT_Y - FRONT_AMP
 
-    shore = "M40 128L98 110L130 119L176 101L232 124L270 128M520 128L566 116L604 122L640 128"
+    hills = "M30 128L88 110L120 119L166 101L222 124L260 128M505 128L548 117L588 123L616 128"
+    city_d, falls_d = city(385, 128)
 
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <defs>
@@ -90,26 +130,30 @@ def build():
     </linearGradient>
   </defs>
   <style>
-    .shore {{ animation: slide-shore 90s linear infinite; }}
-    .ripple {{ animation: drift 6.5s linear infinite; }}
-    .ripple.slow {{ animation-duration: 10s; }}
+    .falls {{ animation: fall 1.2s linear infinite; }}
+    .sail {{ animation: sail linear infinite; }}
+    .rock {{ animation: rock 2.6s ease-in-out infinite alternate; }}
+    .ripple {{ animation: drift 5s linear infinite; }}
+    .ripple.slow {{ animation-duration: 8s; }}
     .mid {{ animation: slide-mid {MID_SECS}s linear infinite; }}
     .front {{ animation: slide-front {FRONT_SECS}s linear infinite; }}
     .bob {{ animation: bob {half}s ease-in-out infinite alternate; }}
     .tilt {{ animation: tilt {half}s ease-in-out {-half / 2}s infinite alternate; transform-origin: {SURF_X}px {FRONT_Y}px; }}
     .strip {{ animation: frames {loop_secs}s steps({n}) infinite; image-rendering: pixelated; }}
-    .spray {{ animation: spray .85s linear infinite; }}
-    .spray.b {{ animation-delay: -.3s; }}
-    .spray.c {{ animation-delay: -.58s; }}
+    .spray {{ animation: spray .7s linear infinite; }}
+    .spray.b {{ animation-delay: -.25s; }}
+    .spray.c {{ animation-delay: -.48s; }}
     .star {{ animation: twinkle 5s ease-in-out infinite alternate; }}
     .star:nth-child(2n) {{ animation-delay: -2s; }}
     .star:nth-child(3n) {{ animation-delay: -3.5s; }}
-    @keyframes slide-shore {{ to {{ transform: translateX(-{W}px); }} }}
-    @keyframes drift {{ to {{ stroke-dashoffset: 240; }} }}
-    @keyframes slide-mid {{ to {{ transform: translateX(-{MID_PERIOD}px); }} }}
-    @keyframes slide-front {{ to {{ transform: translateX(-{FRONT_PERIOD}px); }} }}
+    @keyframes fall {{ to {{ stroke-dashoffset: -6; }} }}
+    @keyframes sail {{ from {{ transform: translateX({W + 50}px); }} to {{ transform: translateX(-50px); }} }}
+    @keyframes rock {{ from {{ transform: rotate(-3deg); }} to {{ transform: rotate(3deg); }} }}
+    @keyframes drift {{ to {{ stroke-dashoffset: -240; }} }}
+    @keyframes slide-mid {{ from {{ transform: translateX(-{MID_PERIOD}px); }} to {{ transform: translateX(0); }} }}
+    @keyframes slide-front {{ from {{ transform: translateX(-{FRONT_PERIOD}px); }} to {{ transform: translateX(0); }} }}
     @keyframes bob {{ from {{ transform: translateY(-{FRONT_AMP}px); }} to {{ transform: translateY({FRONT_AMP}px); }} }}
-    @keyframes tilt {{ from {{ transform: rotate(-4deg); }} to {{ transform: rotate(4deg); }} }}
+    @keyframes tilt {{ from {{ transform: rotate(4deg); }} to {{ transform: rotate(-4deg); }} }}
     @keyframes frames {{ to {{ transform: translateX(-{fw * n}px); }} }}
     @keyframes spray {{ from {{ transform: translateX(0); opacity: .8; }} to {{ transform: translateX(-70px); opacity: 0; }} }}
     @keyframes twinkle {{ from {{ opacity: 1; }} to {{ opacity: .35; }} }}
@@ -132,10 +176,9 @@ def build():
     <circle cx="650" cy="70" r="29" stroke="{ACCENT}" stroke-width="1.6"/>
     <path d="M636 53a21 21 0 0 0 4 32" stroke="{ACCENT}" stroke-opacity=".55" stroke-width="1.4"/>
 
-    <g class="shore" stroke="{MUTED}" stroke-opacity=".55" stroke-width="1.2">
-      <path d="{shore}"/>
-      <path d="{shore}" transform="translate({W})"/>
-    </g>
+    <path d="{hills}" stroke="{MUTED}" stroke-opacity=".55" stroke-width="1.2"/>
+    <path d="{city_d}" stroke="{MUTED}" stroke-opacity=".8" stroke-width="1.1"/>
+    <path class="falls" d="{falls_d}" stroke="{ACCENT}" stroke-opacity=".8" stroke-width="1.4" stroke-dasharray="3 3"/>
     <path d="M0 128H{W}" stroke="{MUTED}" stroke-opacity=".9" stroke-width="1.2"/>
 
     <g stroke="{ACCENT}" stroke-width="1.6">
@@ -147,6 +190,11 @@ def build():
     <g stroke="{MUTED}" stroke-width="1.2" stroke-opacity=".45">
       <path class="ripple slow" d="M0 142H{W}" stroke-dasharray="46 194"/>
       <path class="ripple" d="M0 157H{W}" stroke-dasharray="64 176" stroke-dashoffset="90"/>
+    </g>
+
+    <g stroke="{MUTED}" stroke-opacity=".8" stroke-width="1.2">
+      {ship(138, .5, 80, -30)}
+      {ship(165, .95, 42, -31)}
     </g>
 
     <path class="mid" d="{wave_path(MID_Y, MID_AMP, MID_PERIOD, 0)}" stroke="{MUTED}" stroke-opacity=".6" stroke-width="1.3"/>
