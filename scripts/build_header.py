@@ -67,12 +67,12 @@ DAYLIGHT = {
     "face-a": {"stop-color": ("#2c629c", "#8ad0f5", None)},
     "face-b": {"stop-color": ("#163a67", "#3f96d8", None)},
     "face-c": {"stop-color": ("#0a1a33", "#1f62a6", None)},
-    "stars": {"opacity": (1, 0, .25)},
+    "stars": {"fill-opacity": (1, 0, .25)},
     "hill": {"fill": ("#0c1830", "#7fa596", "#4a4f72")},
     "town": {"fill": ("#0c1830", "#ece6d8", "#6b5f78"), "stroke": ("#8b9bb4", "#5a6a82", "#8b8ba4")},
     "quay": {"fill": ("#1a2a45", "#bdb6a6", "#6d6478")},
     "rocks": {"fill": ("#0c1830", "#808a96", "#4a4a66")},
-    "lamp": {"opacity": (1, .1, .8)},     # windows and lamps go dark by day
+    "lamp": {"fill-opacity": (1, .1, .8)},  # windows and lamps go dark by day (fill-opacity is cheaper to draw than opacity)
     "glow": {"opacity": (1, 0, .6)},      # and their reflections go with them
     "hull": {"fill": ("#0d1a2e", "#27405f", None)},
     "deck": {"fill": ("#1b2d49", "#f3f6fa", None)},
@@ -438,8 +438,8 @@ def build():
     .pass {{ animation: pass linear infinite; }}
     .rock {{ animation: rock 3.4s ease-in-out infinite alternate; }}
     .shimmer {{ animation: shimmer 1.8s ease-in-out infinite alternate; }}
-    .ripple {{ animation: drift 4s linear infinite; }}
-    .ripple.slow {{ animation-duration: 7s; }}
+    .ripple {{ animation: drift 6s linear infinite; }}
+    .ripple.slow {{ animation-duration: 10s; }}
     .wave {{ animation: wave {WAVE_SECS}s linear infinite; }}
     .ride {{ animation: ride {WAVE_SECS}s linear infinite; }}
     .splash {{ animation: splash {frames_secs:.3f}s linear infinite; }}
@@ -493,9 +493,9 @@ def build():
 
     <g stroke="{LINE}" stroke-width="1.1" stroke-opacity=".4">
       <path class="ripple slow" d="M0 137H{W}" stroke-dasharray="40 200"/>
-      <path class="ripple slow" d="M0 152H{W}" stroke-dasharray="56 184" stroke-dashoffset="120"/>
-      <path class="ripple" d="M0 172H{W}" stroke-dasharray="70 170" stroke-dashoffset="60"/>
-      <path class="ripple" d="M0 196H{W}" stroke-dasharray="84 156" stroke-dashoffset="150"/>
+      <path class="ripple slow" style="animation-delay:-3.5s" d="M0 152H{W}" stroke-dasharray="56 184"/>
+      <path class="ripple" style="animation-delay:-1s" d="M0 172H{W}" stroke-dasharray="70 170"/>
+      <path class="ripple" style="animation-delay:-2.6s" d="M0 196H{W}" stroke-dasharray="84 156"/>
     </g>
 
     {ship(container_ship(), 150, 0.6, 110, -48)}

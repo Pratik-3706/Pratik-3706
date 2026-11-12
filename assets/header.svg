@@ -35,12 +35,12 @@
     .c-face-a { animation: c-face-a 48s linear infinite; } @keyframes c-face-a { 0%, 32% { stop-color: #2c629c; } 44%, 81% { stop-color: #8ad0f5; } 93%, 100% { stop-color: #2c629c; } }
     .c-face-b { animation: c-face-b 48s linear infinite; } @keyframes c-face-b { 0%, 32% { stop-color: #163a67; } 44%, 81% { stop-color: #3f96d8; } 93%, 100% { stop-color: #163a67; } }
     .c-face-c { animation: c-face-c 48s linear infinite; } @keyframes c-face-c { 0%, 32% { stop-color: #0a1a33; } 44%, 81% { stop-color: #1f62a6; } 93%, 100% { stop-color: #0a1a33; } }
-    .c-stars { animation: c-stars 48s linear infinite; } @keyframes c-stars { 0%, 32% { opacity: 1; } 38% { opacity: 0.25; } 44%, 81% { opacity: 0; } 87% { opacity: 0.25; } 93%, 100% { opacity: 1; } }
+    .c-stars { animation: c-stars 48s linear infinite; } @keyframes c-stars { 0%, 32% { fill-opacity: 1; } 38% { fill-opacity: 0.25; } 44%, 81% { fill-opacity: 0; } 87% { fill-opacity: 0.25; } 93%, 100% { fill-opacity: 1; } }
     .c-hill { animation: c-hill 48s linear infinite; } @keyframes c-hill { 0%, 32% { fill: #0c1830; } 38% { fill: #4a4f72; } 44%, 81% { fill: #7fa596; } 87% { fill: #4a4f72; } 93%, 100% { fill: #0c1830; } }
     .c-town { animation: c-town 48s linear infinite; } @keyframes c-town { 0%, 32% { fill: #0c1830; stroke: #8b9bb4; } 38% { fill: #6b5f78; stroke: #8b8ba4; } 44%, 81% { fill: #ece6d8; stroke: #5a6a82; } 87% { fill: #6b5f78; stroke: #8b8ba4; } 93%, 100% { fill: #0c1830; stroke: #8b9bb4; } }
     .c-quay { animation: c-quay 48s linear infinite; } @keyframes c-quay { 0%, 32% { fill: #1a2a45; } 38% { fill: #6d6478; } 44%, 81% { fill: #bdb6a6; } 87% { fill: #6d6478; } 93%, 100% { fill: #1a2a45; } }
     .c-rocks { animation: c-rocks 48s linear infinite; } @keyframes c-rocks { 0%, 32% { fill: #0c1830; } 38% { fill: #4a4a66; } 44%, 81% { fill: #808a96; } 87% { fill: #4a4a66; } 93%, 100% { fill: #0c1830; } }
-    .c-lamp { animation: c-lamp 48s linear infinite; } @keyframes c-lamp { 0%, 32% { opacity: 1; } 38% { opacity: 0.8; } 44%, 81% { opacity: 0.1; } 87% { opacity: 0.8; } 93%, 100% { opacity: 1; } }
+    .c-lamp { animation: c-lamp 48s linear infinite; } @keyframes c-lamp { 0%, 32% { fill-opacity: 1; } 38% { fill-opacity: 0.8; } 44%, 81% { fill-opacity: 0.1; } 87% { fill-opacity: 0.8; } 93%, 100% { fill-opacity: 1; } }
     .c-glow { animation: c-glow 48s linear infinite; } @keyframes c-glow { 0%, 32% { opacity: 1; } 38% { opacity: 0.6; } 44%, 81% { opacity: 0; } 87% { opacity: 0.6; } 93%, 100% { opacity: 1; } }
     .c-hull { animation: c-hull 48s linear infinite; } @keyframes c-hull { 0%, 32% { fill: #0d1a2e; } 44%, 81% { fill: #27405f; } 93%, 100% { fill: #0d1a2e; } }
     .c-deck { animation: c-deck 48s linear infinite; } @keyframes c-deck { 0%, 32% { fill: #1b2d49; } 44%, 81% { fill: #f3f6fa; } 93%, 100% { fill: #1b2d49; } }
@@ -57,8 +57,8 @@
     .pass { animation: pass linear infinite; }
     .rock { animation: rock 3.4s ease-in-out infinite alternate; }
     .shimmer { animation: shimmer 1.8s ease-in-out infinite alternate; }
-    .ripple { animation: drift 4s linear infinite; }
-    .ripple.slow { animation-duration: 7s; }
+    .ripple { animation: drift 6s linear infinite; }
+    .ripple.slow { animation-duration: 10s; }
     .wave { animation: wave 4.0s linear infinite; }
     .ride { animation: ride 4.0s linear infinite; }
     .splash { animation: splash 6.592s linear infinite; }
@@ -112,9 +112,9 @@
 
     <g stroke="#8b9bb4" stroke-width="1.1" stroke-opacity=".4">
       <path class="ripple slow" d="M0 137H846" stroke-dasharray="40 200"/>
-      <path class="ripple slow" d="M0 152H846" stroke-dasharray="56 184" stroke-dashoffset="120"/>
-      <path class="ripple" d="M0 172H846" stroke-dasharray="70 170" stroke-dashoffset="60"/>
-      <path class="ripple" d="M0 196H846" stroke-dasharray="84 156" stroke-dashoffset="150"/>
+      <path class="ripple slow" style="animation-delay:-3.5s" d="M0 152H846" stroke-dasharray="56 184"/>
+      <path class="ripple" style="animation-delay:-1s" d="M0 172H846" stroke-dasharray="70 170"/>
+      <path class="ripple" style="animation-delay:-2.6s" d="M0 196H846" stroke-dasharray="84 156"/>
     </g>
 
     <g transform="translate(0 150)"><g class="pass" style="animation-duration:110s;animation-delay:-48s"><g transform="scale(0.6)">
