@@ -52,7 +52,6 @@ WARM = "#f2c14e"
 SURFER_X = 200
 WAVE_Y, WAVE_AMP, WAVE_PERIOD, WAVE_SECS = 250, 14, 423, 4.0
 BOARD_SINK = 11       # how far the bottom of the board sits under the surface
-SHIP_Y = 231          # every ship floats on this one line, just behind the waves
 
 # --- surfer ----------------------------------------------------------------
 
@@ -147,14 +146,17 @@ def wave_path(y, amp, period, crest_x, drop=0, close_to=None):
     return d
 
 
-def ride_keyframes(amp, period, steps=24):
-    """Keeps the board on the wave: its height and its slope at every moment."""
+def ride_keyframes(amp, period, tilt=1.0, steps=24):
+    """Keeps something on the wave: its height and its slope at every moment.
+
+    tilt below 1 leans it less than the water does, for long hulls.
+    """
     out = []
     for i in range(steps + 1):
         f = i / steps
         y = -amp * math.cos(2 * math.pi * f)
         slope = -amp * 2 * math.pi / period * math.sin(2 * math.pi * f)
-        out.append(f"{f * 100:.2f}% {{ transform: translateY({y:.2f}px) rotate({math.degrees(math.atan(slope)):.2f}deg); }}")
+        out.append(f"{f * 100:.2f}% {{ transform: translateY({y:.2f}px) rotate({math.degrees(math.atan(slope)) * tilt:.2f}deg); }}")
     return " ".join(out)
 
 
@@ -173,7 +175,7 @@ def hills(rng):
 def skyline(rng):
     """One screen-wide strip of city on its quay: roofs, towers, domes, lit windows."""
     base = CITY_BASE
-    d, lights, x = [f"M0 {base}"], [], 0
+    d, lights, glints, x = [f"M0 {base}"], [], [], 0
     while x < W:
         kind = rng.choices(["house", "tower", "dome", "hall", "gap"], [50, 16, 8, 14, 12])[0]
         w, h = {
@@ -201,6 +203,7 @@ def skyline(rng):
                 lx = x + rng.uniform(2, max(2.5, w - 4))
                 ly = base - rng.uniform(3, h - 3)
                 lights.append(f'<rect x="{lx:.1f}" y="{ly:.1f}" width="1.6" height="2.2"/>')
+                glints.append((lx + 0.8, 0.6))
         x += w
     d.append(f"V{base}H0Z")
 
@@ -221,6 +224,19 @@ def skyline(rng):
         f'fill="{LAND}" stroke="{LINE}" stroke-opacity=".8" stroke-width="1"/>'
         f'<g class="blink" fill="{WARM}"><circle cx="{lx}" cy="{base - 37}" r="2"/>'
         f'<circle cx="{lx}" cy="{base - 37}" r="8" opacity=".25"/></g>')
+    # Every light on shore throws a broken streak down the water toward us.
+    glints += [(gx, 1.0) for gx in range(14, W, 47)]
+    rows = ((4, 7, .6), (9, 6, .48), (15, 5, .36), (22, 4, .26), (30, 3, .17))
+    reflection = ""
+    for i, (dy, width, alpha) in enumerate(rows):
+        dashes = "".join(
+            f"M{gx - width * size / 2:.1f} {WATER + dy}h{width * size:.1f}"
+            for gx, size in glints if size == 1.0 or i < 3)
+        reflection += (f'<path class="shimmer" style="animation-delay:{-i * 0.45:.2f}s" d="{dashes}" '
+                       f'stroke="{WARM}" stroke-opacity="{alpha}" stroke-width="1.3"/>')
+    beam = "".join(f"M{lx - w / 2:g} {WATER + dy}h{w}" for dy, w in ((5, 12), (11, 10), (18, 8), (26, 6), (35, 4)))
+    reflection += f'<path class="blink" d="{beam}" stroke="{WARM}" stroke-opacity=".7" stroke-width="1.6"/>'
+
     return (
         f'<path d="{"".join(d)}" fill="{LAND}" stroke="{LINE}" stroke-opacity=".75" stroke-width="1"/>'
         f'<g fill="{WARM}">{"".join(lights)}</g>{lighthouse}'
@@ -228,7 +244,7 @@ def skyline(rng):
         f'<path d="{buttresses}" stroke="{LINE}" stroke-opacity=".3" stroke-width="1"/>'
         f'<path d="M0 {base}H{W}" stroke="{LINE}" stroke-opacity=".9" stroke-width="1.2"/>'
         f'<path d="{"".join(rocks)}" fill="{LAND}" stroke="{LINE}" stroke-opacity=".45" stroke-width="1"/>'
-        f'<g fill="{WARM}">{lamps}</g>')
+        f'<g fill="{WARM}">{lamps}</g>'), reflection
 
 
 def cruise_ship():
@@ -265,17 +281,30 @@ def container_ship():
         <g fill="{WARM}">{bridge}{deck_lights}</g>"""
 
 
-def ship(body, waterline, scale, secs, delay):
-    """A ship sliding left past the camera, with its shadow and reflection."""
+PASS_TRAVEL = 3 * WAVE_PERIOD   # a whole number of waves, so a ship's bobbing never jumps
+
+
+def ship(body, scale, secs, delay):
+    """A ship sliding left past the camera, floating on the same waves as the surfer.
+
+    Returns (the ship, to draw behind the wave; its lights on the water, to draw in front).
+    """
+    # The ship meets the waves head on, so they pass under it faster than they
+    # pass under her. Work out how often, and where in a wave it starts.
+    speed = PASS_TRAVEL / secs
+    wave_speed = WAVE_PERIOD / WAVE_SECS
+    bob = WAVE_PERIOD / (speed + wave_speed)
+    start_x = W + (PASS_TRAVEL - W) / 2
+    phase = ((start_x + speed * delay - SURFER_X) / WAVE_PERIOD) % 1
+    wrap = (f'<g transform="translate(0 {WAVE_Y + 2})"><g class="pass" style="animation-duration:{secs}s;animation-delay:{delay}s">'
+            f'<g class="float" style="animation-duration:{bob:.3f}s;animation-delay:{phase * bob - bob:.3f}s"><g transform="scale({scale})">')
+    close = "</g></g></g></g>"
     streaks = "".join(
         f'<path class="shimmer" style="animation-delay:{-i * 0.7}s" d="M{-w / 2:g} {y}h{w}"/>'
-        for i, (y, w) in enumerate(((4, 120), (9, 86), (15, 52), (22, 24))))
-    return f"""<g transform="translate(0 {waterline})"><g class="pass" style="animation-duration:{secs}s;animation-delay:{delay}s"><g transform="scale({scale})">
-        <ellipse cx="0" cy="2" rx="84" ry="3.5" fill="#040a14" opacity=".6"/>
-        <g transform="scale(1 -.55)" opacity=".22">{body}</g>
-        <g stroke="{WARM}" stroke-width="1.2" opacity=".45">{streaks}</g>
-        <g class="rock">{body}</g>
-      </g></g></g>"""
+        for i, (y, w) in enumerate(((5, 120), (10, 90), (16, 58), (23, 28))))
+    behind = f'{wrap}<rect x="-72" y="-1" width="134" height="22" fill="{HULL}"/>{body}{close}'
+    front = f'{wrap}<g stroke="{WARM}" stroke-width="1.2" opacity=".5">{streaks}</g>{close}'
+    return behind, front
 
 
 def build():
@@ -287,10 +316,12 @@ def build():
     rng = random.Random(7)
 
     ride_css = ride_keyframes(WAVE_AMP, WAVE_PERIOD)
+    float_css = ride_keyframes(WAVE_AMP * 0.85, WAVE_PERIOD, tilt=0.3)
+    ships = [ship(container_ship(), 0.95, 84, -40), ship(cruise_ship(), 1.35, 46, -11)]
     crest = WAVE_Y - WAVE_AMP
 
     hills_d = hills(rng)
-    city_tile = skyline(rng)
+    city_tile, city_glints = skyline(rng)
     stars = "".join(
         f'<circle class="star" cx="{rng.randint(10, W - 10)}" cy="{rng.randint(8, CITY_BASE - 44)}" r="{rng.choice((0.8, 1, 1.2, 1.5))}"/>'
         for _ in range(26))
@@ -313,6 +344,9 @@ def build():
     <linearGradient id="face" x1="0" x2="0" y1="{crest}" y2="{H}" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#2c629c"/><stop offset=".45" stop-color="#163a67"/><stop offset="1" stop-color="#0a1a33"/>
     </linearGradient>
+    <linearGradient id="cityglow" x1="0" x2="0" y1="{WATER}" y2="{WATER + 44}" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="{WARM}" stop-opacity=".13"/><stop offset="1" stop-color="{WARM}" stop-opacity="0"/>
+    </linearGradient>
     <linearGradient id="shade" x1="0" x2="0" y1="{WATER}" y2="{WATER + 10}" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#040a14" stop-opacity=".6"/><stop offset="1" stop-color="#040a14" stop-opacity="0"/>
     </linearGradient>
@@ -326,7 +360,7 @@ def build():
     .city {{ animation: scroll 55s linear infinite; }}
     .blink {{ animation: blink 2.4s steps(1) infinite; }}
     .pass {{ animation: pass linear infinite; }}
-    .rock {{ animation: rock 3.4s ease-in-out infinite alternate; }}
+    .float {{ animation: float linear infinite; }}
     .shimmer {{ animation: shimmer 1.8s ease-in-out infinite alternate; }}
     .ripple {{ animation: drift 4s linear infinite; }}
     .ripple.slow {{ animation-duration: 7s; }}
@@ -340,8 +374,8 @@ def build():
     @keyframes twinkle {{ from {{ opacity: 1; }} to {{ opacity: .3; }} }}
     @keyframes scroll {{ to {{ transform: translateX(-{W}px); }} }}
     @keyframes blink {{ 0% {{ opacity: 1; }} 55% {{ opacity: .15; }} }}
-    @keyframes pass {{ from {{ transform: translateX({W + 150}px); }} to {{ transform: translateX(-150px); }} }}
-    @keyframes rock {{ from {{ transform: rotate(-.8deg); }} to {{ transform: rotate(.8deg); }} }}
+    @keyframes pass {{ from {{ transform: translateX({W + (PASS_TRAVEL - W) / 2}px); }} to {{ transform: translateX(-{(PASS_TRAVEL - W) / 2}px); }} }}
+    @keyframes float {{ {float_css} }}
     @keyframes shimmer {{ from {{ opacity: 1; transform: translateX(-2px); }} to {{ opacity: .35; transform: translateX(2px); }} }}
     @keyframes drift {{ to {{ stroke-dashoffset: -240; }} }}
     @keyframes wave {{ from {{ transform: translateX(-{WAVE_PERIOD}px); }} to {{ transform: translateX(0); }} }}
@@ -366,6 +400,8 @@ def build():
     <rect y="{WATER}" width="{W}" height="{H - WATER}" fill="url(#sea)"/>
     {city()}
     <rect y="{WATER}" width="{W}" height="10" fill="url(#shade)"/>
+    <rect y="{WATER}" width="{W}" height="44" fill="url(#cityglow)"/>
+    <g class="city">{city_glints}<g transform="translate({W})">{city_glints}</g></g>
 
     <g stroke="{FOAM}" stroke-width="1.6" stroke-opacity=".8">{moon_path}</g>
 
@@ -376,8 +412,8 @@ def build():
       <path class="ripple" d="M0 196H{W}" stroke-dasharray="84 156" stroke-dashoffset="150"/>
     </g>
 
-    {ship(container_ship(), SHIP_Y, 0.95, 84, -40)}
-    {ship(cruise_ship(), SHIP_Y, 1.35, 46, -11)}
+    {ships[0][0]}
+    {ships[1][0]}
 
     <g transform="translate({SURFER_X} {WAVE_Y})">
       <g class="ride">
@@ -391,6 +427,8 @@ def build():
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, drop=13)}" stroke="{FOAM}" stroke-opacity=".28" stroke-width="1.3"/>
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, drop=28)}" stroke="{FOAM}" stroke-opacity=".14" stroke-width="1.3"/>
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X)}" stroke="{FOAM}" stroke-width="2"/>
+    {ships[0][1]}
+    {ships[1][1]}
 
     <g transform="translate({SURFER_X} {WAVE_Y})">
       <g class="ride">
