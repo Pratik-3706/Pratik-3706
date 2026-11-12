@@ -18,14 +18,15 @@ OUT = ROOT / "assets" / "header.svg"
 # The loop shown on the wave. Swap the file or add entries here later.
 SURFER_GIF = ROOT / "assets" / "Chibi Furina Surfing Loop.gif"
 SURFER_HEIGHT = 128  # drawn height in header units
+SURFER_SPEED = 1.2   # 1 plays the GIF at its own frame rate
 
 W, H = 846, 240
 ACCENT = "#4a9eda"
 MUTED = "#8b949e"
 
 SURF_X = 190  # where the board's centre sits
-FRONT_Y, FRONT_AMP, FRONT_PERIOD, FRONT_SECS = 204, 8, 282, 4.6
-MID_Y, MID_AMP, MID_PERIOD, MID_SECS = 178, 4, 141, 6.5
+FRONT_Y, FRONT_AMP, FRONT_PERIOD, FRONT_SECS = 204, 8, 282, 3.4
+MID_Y, MID_AMP, MID_PERIOD, MID_SECS = 178, 4, 141, 4.8
 
 
 def load_strip(path):
@@ -47,7 +48,7 @@ def load_strip(path):
     buf = io.BytesIO()
     strip.quantize(255, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(
         buf, "PNG", optimize=True)
-    return base64.b64encode(buf.getvalue()).decode(), fw, fh, len(frames), total_ms / 1000
+    return base64.b64encode(buf.getvalue()).decode(), fw, fh, len(frames), total_ms / 1000 / SURFER_SPEED
 
 
 def wave_path(y, amp, period, crest_x, close_to=None):
@@ -89,17 +90,17 @@ def build():
     </linearGradient>
   </defs>
   <style>
-    .shore {{ animation: slide-shore 120s linear infinite; }}
-    .ripple {{ animation: drift 9s linear infinite; }}
-    .ripple.slow {{ animation-duration: 14s; }}
+    .shore {{ animation: slide-shore 90s linear infinite; }}
+    .ripple {{ animation: drift 6.5s linear infinite; }}
+    .ripple.slow {{ animation-duration: 10s; }}
     .mid {{ animation: slide-mid {MID_SECS}s linear infinite; }}
     .front {{ animation: slide-front {FRONT_SECS}s linear infinite; }}
     .bob {{ animation: bob {half}s ease-in-out infinite alternate; }}
     .tilt {{ animation: tilt {half}s ease-in-out {-half / 2}s infinite alternate; transform-origin: {SURF_X}px {FRONT_Y}px; }}
     .strip {{ animation: frames {loop_secs}s steps({n}) infinite; image-rendering: pixelated; }}
-    .spray {{ animation: spray 1.1s linear infinite; }}
-    .spray.b {{ animation-delay: -.4s; }}
-    .spray.c {{ animation-delay: -.75s; }}
+    .spray {{ animation: spray .85s linear infinite; }}
+    .spray.b {{ animation-delay: -.3s; }}
+    .spray.c {{ animation-delay: -.58s; }}
     .star {{ animation: twinkle 5s ease-in-out infinite alternate; }}
     .star:nth-child(2n) {{ animation-delay: -2s; }}
     .star:nth-child(3n) {{ animation-delay: -3.5s; }}
