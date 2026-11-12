@@ -25,9 +25,12 @@ OUT = ASSETS / "header.svg"
 #   (file, times to play, speed, pin)
 # pin=True keeps the board glued to the water in every frame; pin=False keeps
 # the GIF's own up-and-down movement, which is what a jump needs.
+SURF = ASSETS / "Chibi Furina Surfing Loop.gif"
 LOOPS = [
-    (ASSETS / "Chibi Furina Surfing Loop.gif", 3, 1.35, True),
+    (SURF, 2, 1.35, True),
     (ASSETS / "Chibi Surfer’s Animated Board Grab.gif", 1, 1.2, False),
+    (SURF, 2, 1.35, True),
+    (ASSETS / "Chibi Surfboard Spin Animation.gif", 1, 1.2, False),
 ]
 SURFER_HEIGHT = 128   # drawn height of her standing pose, in header units
 
@@ -47,7 +50,7 @@ WARM = "#f2c14e"
 
 # The waves she rides: a rolling swell that travels right, under her board.
 SURFER_X = 200
-WAVE_Y, WAVE_AMP, WAVE_PERIOD, WAVE_SECS = 250, 14, 282, 2.7
+WAVE_Y, WAVE_AMP, WAVE_PERIOD, WAVE_SECS = 250, 14, 423, 4.0
 
 # --- surfer ----------------------------------------------------------------
 
@@ -58,8 +61,13 @@ def load_sprites(loops):
     where the anchor is the point of a cell that sits on the water and the
     timeline is a list of (frame index, seconds).
     """
-    placed, timeline, standing = [], [], None
+    placed, timeline, standing, seen = [], [], None, {}
     for path, times, speed, pin in loops:
+        if path in seen:
+            first, secs = seen[path]
+            for _ in range(times):
+                timeline += [(first + i, t) for i, t in enumerate(secs)]
+            continue
         gif = Image.open(path)
         first = len(placed)
         frames, secs = [], []
@@ -74,6 +82,7 @@ def load_sprites(loops):
         for f, b in zip(frames, boxes):
             foot = b[3] if pin else boxes[0][3]
             placed.append((f.crop(b), b[0] - anchor_x, b[1] - foot))
+        seen[path] = (first, secs)
         for _ in range(times):
             timeline += [(first + i, s) for i, s in enumerate(secs)]
 
@@ -287,7 +296,7 @@ def build():
     .shimmer {{ animation: shimmer 1.8s ease-in-out infinite alternate; }}
     .ripple {{ animation: drift 4s linear infinite; }}
     .ripple.slow {{ animation-duration: 7s; }}
-    .chop {{ animation: chop 3.4s linear infinite; }}
+    .chop {{ animation: chop 5s linear infinite; }}
     .wave {{ animation: wave {WAVE_SECS}s linear infinite; }}
     .bob {{ animation: bob {half}s ease-in-out infinite alternate; }}
     .tilt {{ animation: tilt {half}s ease-in-out {-half / 2}s infinite alternate; }}
@@ -302,10 +311,10 @@ def build():
     @keyframes rock {{ from {{ transform: rotate(-.8deg); }} to {{ transform: rotate(.8deg); }} }}
     @keyframes shimmer {{ from {{ opacity: 1; transform: translateX(-2px); }} to {{ opacity: .35; transform: translateX(2px); }} }}
     @keyframes drift {{ to {{ stroke-dashoffset: -240; }} }}
-    @keyframes chop {{ from {{ transform: translateX(-141px); }} to {{ transform: translateX(0); }} }}
+    @keyframes chop {{ from {{ transform: translateX(-211.5px); }} to {{ transform: translateX(0); }} }}
     @keyframes wave {{ from {{ transform: translateX(-{WAVE_PERIOD}px); }} to {{ transform: translateX(0); }} }}
     @keyframes bob {{ from {{ transform: translateY(-{WAVE_AMP}px); }} to {{ transform: translateY({WAVE_AMP}px); }} }}
-    @keyframes tilt {{ from {{ transform: rotate(9deg); }} to {{ transform: rotate(-9deg); }} }}
+    @keyframes tilt {{ from {{ transform: rotate(6deg); }} to {{ transform: rotate(-6deg); }} }}
     @keyframes frames {{ {frames_css} }}
     @keyframes spray {{ from {{ transform: translate(0, 0); opacity: .95; }} to {{ transform: translate(-46px, -8px); opacity: 0; }} }}
     @media (prefers-reduced-motion: reduce) {{ * {{ animation: none !important; }} }}
@@ -339,7 +348,7 @@ def build():
     {ship(container_ship(), 150, 0.6, 110, -48)}
     {ship(cruise_ship(), 218, 1.35, 46, -11)}
 
-    <path class="chop" d="{chop_line(228, 3.5, 141)}" stroke="{LINE}" stroke-opacity=".55" stroke-width="1.2"/>
+    <path class="chop" d="{chop_line(228, 3.5, 211.5)}" stroke="{LINE}" stroke-opacity=".55" stroke-width="1.2"/>
 
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, close_to=H + 10)}" fill="url(#face)"/>
     <path class="wave" d="{wave_path(WAVE_Y, WAVE_AMP, WAVE_PERIOD, SURFER_X, drop=13)}" stroke="{FOAM}" stroke-opacity=".28" stroke-width="1.3"/>
